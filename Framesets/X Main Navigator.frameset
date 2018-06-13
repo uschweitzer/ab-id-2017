@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='form' xmlns='http://www.lotus.com/dxl' version='9.0' maintenanceversion='1.10'
+ replicaid='C12582AB004539D1'>
+<noteinfo noteid='186' unid='507C05401964FC29C12571140051D023' sequence='12'>
+<created><datetime>20060213T155336,99+01</datetime></created>
+<modified><datetime dst='true'>20180613T143609,16+02</datetime></modified>
+<revised><datetime>20071210T164014,43+01</datetime></revised>
+<lastaccessed><datetime dst='true'>20180613T143609,16+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20180613T143609,16+02</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Uwe Schweitzer/O=UwesPlace</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name
+>CN=SETYLN01/O=SET</name><name>CN=SERVER02/O=EducateMe</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name
+>CN=SETYLN01/O=SET</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name
+>CN=SETYLN01/O=SET</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name
+>CN=SETYLN01/O=SET</name><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></updatedby>
+<wassignedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></wassignedby>
+<item name='$TITLE' sign='true'><text>X Main Navigator|FR-Nav-Main-X</text></item>
+<item name='$Comment' sign='true'><text/></item>
+<item name='$FrameSet' sign='true'>
+<rawitemdata type='1'>
+7/8YAAIAAwAAAAAAAAAAAAAAAAAAAAAA8P8+AAQAAAABAAAAAAAAAAAAAAAAAAUAAAAAAAUAAAAA
+AAIAAQAAAAAABQAAAAAAAAABAEYAAgBQAAMAAQDx/zQAEQAAAABAAAECAAEAAQAAAAAAAAAAAAAA
+AQAAAAAAAAABAP///wABAAAKAQAAAAAA9v8sAAAAAAADAAcACgAAAAAAAAAAAAAAAAAAAAAAAAAA
+AFAtU0VULUxvZ2/x/zQAAAAAAABAAQADAAEAAQAAAAAAAAAAAAAAAQAAAAAAAAABAP///wABAAAK
+AQAAAAAA9v8oAAAAAAADAAcABgAAAAAAAAAAAAAAAAAAAAAAAAAAAFAtTWFpbg==
+</rawitemdata></item>
+<item name='$DesignerVersion'><text>6.5</text></item>
+<item name='$Flags'><text>#34CQ</text></item></note>
+

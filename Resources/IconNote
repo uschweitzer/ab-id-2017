@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note default='true' class='icon' xmlns='http://www.lotus.com/dxl' version='9.0'
+ maintenanceversion='1.10' replicaid='C12582AB004539D1'>
+<noteinfo noteid='11a' unid='3B26BF79456D5111C1256BEC00355025' sequence='15'>
+<created><datetime dst='true'>20020704T114219,25+02</datetime></created>
+<modified><datetime dst='true'>20180613T143632,79+02</datetime></modified>
+<revised><datetime dst='true'>20180613T143632,78+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20180613T143632,79+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20180613T143608,13+02</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></updatedby>
+<item name='$DefaultFrameset' sign='true'><text>FR-Start</text></item>
+<item name='$TemplateModTime'><datetime>20080111T163912,26+01</datetime></item>
+<item name='$TemplateServerName'><text>CN=HSVVLNHUB/OU=SRV/O=HSVV/C=DE</text></item>
+<item name='$TemplateFileName'><text>d:\Lotus\Domino\Data\T-HSVV-IT-Support.ntf</text></item>
+<item name='IconBitmap' summary='true'>
+<rawitemdata type='6'>
+AiAgAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAiIiIiIiIiIiIiIiIiIiIi/////////+7v/////////xERERER
+H/5ERO8REREREREREREREeSkRO7q7xEREREREREREf6kRETi7urxEREREf/////k7uRE7/H0r///
+//+IiIguThH+RErvH0ToiIiIKIiC9E7u6ItOiCLk/oiIgoiIgvRE5LIrSyi7RO6IiIL////kRErh
+H+EfRERP////ERERRERE4RHxEf//TxEREREREU5ERE7u7u7u7k8RERERERHu7kREu4gihKuvERER
+////7////////kTv7v///4iIju7/EREREeRP/u7oiIgoiC5KpO7u7u5E7u6u6IiCKIguRESIiIiC
+tI5EruiIgu7u70RP//////7/9K7+7u4RER9E4R//EREf/uSuEREREREfTu7kTu7u7u7rrhERERER
+H04rRO67iCtLIq4RERERER9O/kRO///+RO7uH//x4iIuROREROER9ERETugiIiiILkRERERO7kRE
+RE7oiIIoiO/u7u7u7u7u7u7u6IiC7u7v/+7+/+/u/v7v/v7u7hER/v/+7+/+7+/u///xEREREfbx
+9m//5m8fZg/28RERERH/8R9vEf7xEf8RH/8RERER8RER8REfERH/EREfERHiIiIiIuIiLiIiIiIi
+IiIu4iIiIiIiIiIiIiIiIiIiLg==
+</rawitemdata></item>
+<item name='$Flags'><text>JFR7</text></item>
+<item name='$LaunchXPageRunOnServer'><text>0</text></item>
+<item name='$FlagsNoRefresh'><text/></item>
+<item name='$Daos'><text>0</text></item>
+<item name='$LargeSummary'><text>0</text></item>
+<item name='$TITLE'><text>Copy AB ID V2017
+#1Template AB ID V2017-12</text></item></note>
+

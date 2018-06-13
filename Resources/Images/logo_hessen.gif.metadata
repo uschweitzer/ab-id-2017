@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="form" maintenanceversion="1.10" replicaid="C12582AB004539D1" version="9.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="212" sequence="2" unid="54C5CCD46204E6E9C12573AD00348E39">
+<created><datetime>20071210T103402,81+01</datetime></created>
+<modified><datetime dst="true">20180613T143610,88+02</datetime></modified>
+<revised><datetime>20071210T163353,76+01</datetime></revised>
+<lastaccessed><datetime dst="true">20180613T143610,88+02</datetime></lastaccessed>
+<addedtofile><datetime dst="true">20180613T143610,88+02</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></updatedby>
+<wassignedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></wassignedby>
+<item name="$TITLE"><text>logo_hessen.gif</text></item>
+<item name="$FlagsExt" sign="true"><text>D</text></item>
+<item name="$ImagesWide" sign="true"><number>1</number></item>
+<item name="$ImagesHigh" sign="true"><number>1</number></item>
+
+
+<item name="$MimeType" sign="true"><text>image/gif</text></item>
+<item name="$FileModDT" sign="true"><datetime>20050322T151008,00+01</datetime></item>
+<item name="$ImageNames" sign="true"><text>logo_hessen.gif</text></item>
+<item name="$ImagesColorize" sign="true"><number>0</number></item>
+<item name="$DesignerVersion" sign="true"><text>6.5</text></item>
+<item name="$Flags"><text>D34CiQ</text></item></note>

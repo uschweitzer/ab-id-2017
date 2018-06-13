@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='form' xmlns='http://www.lotus.com/dxl' version='9.0' maintenanceversion='1.10'
+ replicaid='C12582AB004539D1'>
+<noteinfo noteid='6c2' unid='4AB1CA28BC4BDCA9C1257D81002664C5' sequence='3'>
+<created><datetime>20141030T075921,65+01</datetime></created>
+<modified><datetime dst='true'>20180613T143630,63+02</datetime></modified>
+<revised><datetime>20141030T100546,98+01</datetime></revised>
+<lastaccessed><datetime dst='true'>20180613T143630,63+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20180613T143630,63+02</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></updatedby>
+<wassignedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></wassignedby>
+<item name='$TITLE' sign='true'><text>Client Navigation SupportSO|FR-Nav-SupportSO</text></item>
+<item name='$WindowTitle' sign='true'><formula>@DbTitle</formula></item>
+<item name='$Comment' sign='true'><text/></item>
+<item name='$FrameSet' sign='true'>
+<rawitemdata type='1'>
+7/8YAAIAAwAAAAAAAAAAAAAAAAAAAAAA8P8+AEUAAAAAAAAAAAAAAAAAAAAAAAUAAAAAAAUAAAAA
+AAEAAgAAAAAAAQD///8AAAADAAEAAQAPAAIAUADx/z0AEQAAAABAAAECAAEAAQAAAAAACQAAAAAA
+AQD///8AAABSZWRQb2ludHMBAP///3wBAAAKAQAAAAB8P/b/LgAAAAAAAwAHAAwAAAAAAAAAAAAA
+AAAAAAAAAAAAAABQLUxlZnRCb3JkZXLx/0AAEQAAAABAAAECAAEAAQAAAAAADAAAAAAAAQD///8A
+AABMb2NhdGlvbkZvcm0BAP///3wBAAAKAQAAAAB89v9NAAAAAAADAAcACAAUAA8AAAAAAAAAAABI
+TFNWTE4wMS9TUlYvSFNWVi9ERVQtSFNWVi1IYXVzLm50ZgAAAAAAAAAAUC1NYWluU08/
+</rawitemdata></item>
+<item name='$Flags'><text>#34CQw</text></item>
+<item name='$DesignerVersion'><text>8.5.2</text></item></note>
+

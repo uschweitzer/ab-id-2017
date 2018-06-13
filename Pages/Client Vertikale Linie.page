@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='form' xmlns='http://www.lotus.com/dxl' version='9.0' maintenanceversion='1.10'
+ replicaid='C12582AB004539D1'>
+<noteinfo noteid='1c2' unid='EAF83CA63FFE0A4CC12573AD003D200C' sequence='2'>
+<created><datetime>20071210T120739,00+01</datetime></created>
+<modified><datetime dst='true'>20180613T143609,82+02</datetime></modified>
+<revised><datetime>20071210T163353,93+01</datetime></revised>
+<lastaccessed><datetime dst='true'>20180613T143609,82+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20180613T143609,82+02</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name
+>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name
+>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></updatedby>
+<wassignedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></wassignedby>
+<item name='OriginalModTime' sign='true'><datetime dst='true'>20050908T150208,35+02</datetime></item>
+<item name='$HTMLCode' sign='true'>
+<rawitemdata type='1'>
+X/8QAAIADwAHAAAAAAAAAA==
+</rawitemdata></item>
+<item name='$TITLE'><textlist><text>Client Vertikale Linie</text><text>P-VertLine</text></textlist></item>
+<item name='$Info' sign='true'>
+<rawitemdata type='1'>
+hhgBAIAAAAAAgAAAAQABAP///wAQAAAA
+</rawitemdata></item>
+<item name='$Flags'><text>C34WQ1</text></item>
+<item name='$DesignerVersion' sign='true'><text>6.5</text></item>
+<item name='$$ScriptName' summary='false' sign='true'><text> P-VertLine</text></item>
+<item name='$Body' sign='true'>
+<rawitemdata type='1'>
+gQKC/1oAAQAAAAAAAAAAAKAFAACgBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAACBAAAAAJWHAAAAAAAAAAAAAAAAAQAAAAYAAACDBAEAzP8IAAAAAACF/wgAAQAACs3/
+CAAAAAAAgQKC/1oAAgAAAAAAAAAAAIoEAACKBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAABAAAAAJSEigQLAIoECwAAAAAAAQAAAAQAAACDBAIA3QYBAPv/+/8sACAA
+AAADAQAAAAAAAAAAAAC3EQAAAAAAAAAAAAABAE9PTwAAAAAAAABc/z4AAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAADgAAAAAAAAABAAAKAAAAAAEAAAAAAN4GAQD7/6MOigQoADwA
+AAAAAAIApBIAAIoE+AgAAAECAQABAQAAgQKC/1oAAwAAAAAAAAAAAJkE+AiZBAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIYBAAAAAFSHAAAAAAAAAAAAAAAAAQAAAAQA
+AACDBAMAhf8IAAEAAAriBLcRpBIBAIoE+AgAAAECAQABAQAAgQKDBAMAhf8IAAEAAAqkEgIAigT4
+CAAAAQIBAAEBAACBAoMEAwCF/wgAAQAACqUGAAAAAIECgv9aAAQAAAAAAAAAAACgBQAAoAUAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAACUhwAAAAAAAAAAAAAA
+AAEAAAAEAAAAgwQEAMz/CAAAAAAAhf8IAAEAAArN/wgAAAAAAA==
+</rawitemdata></item></note>
+

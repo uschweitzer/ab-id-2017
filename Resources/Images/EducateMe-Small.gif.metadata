@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="form" maintenanceversion="1.10" replicaid="C12582AB004539D1" version="9.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="24e" sequence="9" unid="709CA08688474615C125711400556FEA">
+<created><datetime>20060213T163312,10+01</datetime></created>
+<modified><datetime dst="true">20180613T143611,62+02</datetime></modified>
+<revised><datetime>20071210T163351,35+01</datetime></revised>
+<lastaccessed><datetime dst="true">20180613T143611,62+02</datetime></lastaccessed>
+<addedtofile><datetime dst="true">20180613T143611,62+02</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=SETYLN01/O=SET</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=SETYLN01/O=SET</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=SETYLN01/O=SET</name><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></updatedby>
+<wassignedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></wassignedby>
+<item name="$ImagesWide" sign="true"><number>1</number></item>
+<item name="$ImagesHigh" sign="true"><number>1</number></item>
+<item name="$ImagesColorize" sign="true"><number>0</number></item>
+
+<item name="$ImageNames" sign="true"><text>EducateMe-Small.gif</text></item>
+<item name="$TITLE" sign="true"><textlist><text>EducateMe-Small.gif</text><text>Logo-EducateMe</text></textlist></item>
+<item name="$DesignerVersion" sign="true"><text>6.5</text></item>
+<item name="$Flags"><text>34CiQ</text></item></note>

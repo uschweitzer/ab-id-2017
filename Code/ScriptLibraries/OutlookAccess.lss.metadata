@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="filter" maintenanceversion="1.10" replicaid="C12582AB004539D1" version="9.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="71e" sequence="3" unid="7C06210CBD517532C12581A6003B814D">
+<created><datetime dst="true">20170925T124957,25+02</datetime></created>
+<modified><datetime dst="true">20180613T143631,99+02</datetime></modified>
+<revised><datetime>20171106T114142,12+01</datetime></revised>
+<lastaccessed><datetime dst="true">20180613T143631,99+02</datetime></lastaccessed>
+<addedtofile><datetime dst="true">20180613T143631,99+02</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></updatedby>
+<wassignedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></wassignedby>
+<item name="$Flags"><text>s34Q</text></item>
+<item name="$PublicAccess" sign="true"><text>1</text></item>
+<item name="$TITLE" sign="true"><text>OutlookAccess</text></item>
+<item name="$DesignerVersion" sign="true"><text>8.5.3</text></item>
+
+</note>

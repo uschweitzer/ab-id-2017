@@ -1,0 +1,1070 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Use "Common"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Sub Terminate
+Declare Function MEMO_Querysave(uidoc As NotesUIDocument) As Boolean
+Declare Sub OWA_CreateCall()
+Declare Sub MEMO_PostSave()
+Declare Sub OWA_SetRecipients_Modal()
+Declare Sub OWA_Import_GetSubFolderID(parentfolder)
+Declare Sub OWA_Import_CreateDoc(MessageID$)
+Declare Sub OWA_Import(ImportFrom$)
+Declare Function OWA_Import_GetFolderID() As String
+Declare Sub OWA_InitLocalCache()
+Declare Sub OWA_CreateCall_Init(ImportFrom$)
+Declare Sub OWA_Import_Select()
+Declare Sub MEMO_SetPrincipal()
+Declare Sub OWA_SetPrincipal
+Declare Sub OWA_Import_Clean()
+Declare Function OWA_Init() As Boolean
+Declare Sub OWA_SetRecipients()
+Declare Function OWA_Import_GetRecipient() As String
+Declare Sub OWA_CreateCall_PostSave()
+Declare Function OWA_Cache(ImportFrom$) As Boolean
+Declare Sub OWA_Import_RefList(importfolder)
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Dim owalog As NotesLog
+Dim owacachedb As NotesDatabase
+
+Dim modaldoc As NotesDocument
+
+Dim UserMailAddress$ 'Benutzer-Mailadresse
+Dim refcat$ 'Kontrollvariable
+Dim folderlist() As String 'Ordnerliste
+Dim folderindex%
+Dim TempDir$
+Dim CallNo$ 
+
+'Office Access
+Dim App
+Dim App_NameSpace
+
+'Database-Filepath
+Const CacheDB_FilePath="owacache.nsf"
+Const CacheDB_TemplatePath="develop\t-owacache.ntf"
+Const CacheDB_Inbox="V-TmpInbox"
+
+'Outlook Konstanten
+Const olFolderDeletedItems=3
+Const olFolderOutbox=4
+Const olFolderSentMail=5
+Const olFolderInbox=6
+Const olFolderCalendar=9
+Const olFolderContacts=10
+Const olFolderJournal=11
+Const olFolderNotes=12
+Const olFolderTasks=13
+Const olFolderDrafts=16
+Const olPublicFoldersAllPublicFolders=18
+Const olFolderConflicts=19
+Const olFolderSyncIssues=20
+Const olFolderLocalFailures=21
+Const olFolderServerFailures=22
+Const olFolderJunk=23
+
+Const olMailItem=0 'Mailobjekt
+Const olByValue=1 'Kopie der Datei als Anhang
+
+'Recipient-Types
+Const olOriginator=0 'Absender
+Const olTo=1 'Empfänger An
+Const olCC=2 'Empfänger CC
+Const olBCC=3 'Empfänger BCC
+Const olToCcBcc=3 'Anzeige im Adressdialog
+
+'Class-Spezifikation
+Const olAppointmentItem=1
+Const olMail=43
+
+'Body-Formate
+Const olFormatPlain=1 'Nur-Text-Format
+Const olFormatHTML=2 'HTML-Format
+Const olFormatRichText=3 'Rich-Text-Format
+Const olFormatUnspecified=0 'Nicht angegebenes Format
+
+'Exportformate
+Const olTXT=0 'Textformat (TXT)
+Const olMSG=3 'Outlook-Nachrichtenformat (MSG)
+Const olHTML=5 'HTML-Format (HTML)
+Const olMHTML=10 'MIME-HTML-Format (MHT)
+
+'++LotusScript Development Environment:2:2:Terminate:1:10
+Sub Terminate
+	
+End Sub
+
+
+
+'++LotusScript Development Environment:2:1:MEMO_Querysave:1:8
+Function MEMO_Querysave(uidoc As NotesUIDocument) As Boolean
+		
+	'Initialisiere Steuervariablen
+	MEMO_Querysave=True
+	ErrorText$="" 'Fehlermeldung Valedierung
+	
+	Call uidoc.FieldSetText("CloseWindow","") 'Steuerfeld
+	
+	'Valedierung Thema
+	If thisdoc.Subject(0)="" Then		
+		ErrorText$="Fehlendes Thema!"
+	End If
+	
+	'Valedierung Mail
+	If (thisdoc.DocuType(0)="1" Or thisdoc.DocuType(0)="4") And thisdoc.DocIsDraft(0)="0" Then
+		'Valedierung Empfänger
+		If thisdoc.EditSendTo(0)="" Then 
+			ErrorText$=ErrorText$ & "Fehlender Empfänger!" & Chr(13)
+		End If
+		'Valedierung Absenderkennung
+		If thisdoc.Mail_Principal(0)="" Then 
+			ErrorText$=ErrorText$ & "Fehlende Absenderkennung!" & Chr(13)
+		End If
+	End If
+
+	If ErrorText$<>"" Then
+		MessageBox "Bitte ergänzen/korrigieren Sie folgende Angaben:" & Chr(13) & ErrorText$, 64,thisdb.Title
+		Call uidoc.GotoField("Subject")
+		Call uidoc.FieldSetText("CloseWindow","X")
+		MEMO_Querysave=False
+	End If
+	
+End Function
+
+'++LotusScript Development Environment:2:2:OWA_CreateCall:1:8
+Sub OWA_CreateCall()
+	
+	Dim ws As New NotesUIWorkspace
+	
+	Dim newcalldoc As NotesDocument 'Neue Anfrage
+	Dim newcallbody As NotesRichTextItem
+	Dim accessitem As NotesItem
+
+	Dim selection As NotesDocumentCollection
+	Dim refdoc As NotesDocument
+	
+	Dim mailitem 'ausgewählte Nachricht
+	
+	'Auswahl der Nachricht
+	Set selection=ws.Picklistcollection(3, False, owacachedb.Server,owacachedb.Filepath,CacheDB_Inbox, owacachedb.Title, "Bitte wählen:")
+	If selection.count=0 Then
+		Call owalog.LogAction("ABBRUCH: Keine Auswahl aus " & owacachedb.Title)
+		Exit Sub
+	End If
+	
+	Set refdoc=selection.Getfirstdocument()
+	Set mailitem=App_NameSpace.GetItemFromID(refdoc.MessageID(0))
+
+	'Ablage MSG --> Seperater Import
+	'memotemppath$=TempDir$ & "mail-" & CStr(mailitem.SenderName) & ".msg"
+	'mailitem.SaveAs memotemppath$, olMSG
+	
+	Set newcalldoc=New NotesDocument(thisdb)
+	'Basiswerte übernehmen
+	newcalldoc.Form="F_Supp_Call"
+	newcalldoc.DocType="F_Supp_Call"
+	newcalldoc.Call_Status="Neu"
+	newcalldoc.Call_Date=Now()
+	newcalldoc.Call_By=""	
+	newcalldoc.Flag_New="1"
+	newcalldoc.Flag_NotifyNew="0"
+	newcalldoc.Flag_NotifyEditing="0"
+	newcalldoc.Flag_NotifyEditor="0"
+	newcalldoc.Flag_NotifyReady="0"
+	Set accessitem = New NotesItem(newcalldoc,"Call_Editor",session.UserName,NAMES)
+	
+	'Übernahme aus gewählter Nachricht
+	newcalldoc.Outlook_MessageID=refdoc.MessageID(0)
+	newcalldoc.Flag_OrgID_Processed="0"
+	newcalldoc.Call_Description=mailitem.Subject 'Thema als Beschreibung
+	Set newcallbody=New NotesRichTextItem(newcalldoc,"Body")
+	Call newcallbody.AppendText("Original Meldung: Mail von " & mailitem.SenderName & Chr(13))
+	
+	'Ursprungsnachricht als MSG-Anhang
+	'Set fileobject=newcallbody.EmbedObject(EMBED_ATTACHMENT, "", memotemppath$)
+	'Kill memotemppath$	
+
+	Call newcallbody.Update
+	
+	Call OWA_Import_Clean() 'Aufruf: temp. Einträge entfernen
+	Call owalog.LogAction("BEENDET: Erstellen Anfrage aus Mail durch "  & session.Commonusername)
+	
+	Call ws.EditDocument(True, newcalldoc,False,,False)
+		
+End Sub
+
+'++LotusScript Development Environment:2:2:MEMO_PostSave:1:8
+Sub MEMO_PostSave()
+	
+	Dim ws As New NotesUIWorkspace
+	
+	'Print "BEGINN Memo-PostSave"
+	
+	'DOC=Notiz
+	If thisdoc.DocuType(0)="0" Then
+		Call thisdoc.RemoveItem("EditSendTo")
+		Call thisdoc.RemoveItem("EditCopyTo")
+		Call thisdoc.RemoveItem("EditBlindCopyTo")
+	End If
+	
+	'DOC=Nachricht
+	If thisdoc.DocuType(0)="1" Or thisdoc.DocuType(0)="4" Then
+		'Setze Recipientfeld
+		thisdoc.RECIPIENTS=thisdoc.EditSendTo		
+		If thisdoc.EditCopyTo(0)<>"" Then
+			thisdoc.RECIPIENTS=ArrayAppend(thisdoc.RECIPIENTS,thisdoc.EditCopyTo)
+		End If		
+		If thisdoc.EditBlindCopyTo(0)<>"" Then
+			thisdoc.RECIPIENTS=ArrayAppend(thisdoc.RECIPIENTS,thisdoc.EditBlindCopyTo)
+		End If
+		
+		Call thisdoc.RemoveItem("WorkTime")	
+	End If
+	
+	Call basedoc.DocPostSave(True)
+	
+	'Print "Set SaveOptions"
+	thisdoc.SaveOptions="0"
+	'Print "ENDE Memo-PostSave"
+	
+	Call ws.Viewrefresh()
+	
+End Sub
+
+
+
+'++LotusScript Development Environment:2:2:OWA_SetRecipients_Modal:1:8
+Sub OWA_SetRecipients_Modal()
+	
+	Dim ws As New NotesUIWorkspace
+	Dim AppDialog
+	
+	Set session=New NotesSession
+	Set thisdb=session.Currentdatabase
+
+	On Error GoTo errorhandler	
+
+	If Not OWA_Init() Then
+		Exit Sub
+	End If
+	
+	Set AppDialog = App_NameSpace.GetSelectNamesDialog 'Adressdialog initialisieren
+	
+	'Vorbelegung Adressdialog
+	AppDialog.ShowOnlyInitialAddressList = False 'Auswahl der Adressliste zulassen
+	AppDialog.NumberOfRecipientSelectors=olTo 'Nur Adresszeilen TO anzeigen
+
+	'Vorbelegung TO	
+	EditSendTo$=ws.Currentdocument.Fieldgettext("EditSendTo")
+	If EditSendTo$<>"" Then
+		Set myRecp=AppDialog.Recipients.Add(EditSendTo$)
+		myRecp.Type=olTo
+	End If
+	
+	AppDialog.Display 'Adressdialog Anzeigen	
+	Set recipients=AppDialog.Recipients 'Empfänger übernehmen
+	
+	If recipients.Count=0 Then Exit Sub
+	
+	EditSendTo$=""	
+	ForAll rname In recipients		
+		EditSendTo$=EditSendTo$ & rname.name & ";"	
+	End ForAll
+
+	Call ws.Currentdocument.Fieldsettext("EditSendTo", EditSendTo$)
+	Call ws.Currentdocument.Refresh(True, True)
+	Call ws.Viewrefresh()
+	
+	Exit Sub
+
+errorhandler:
+	MessageBox "Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Print "Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Resume errorexit
+
+errorexit:
+	Exit Sub
+	
+End Sub
+
+'++LotusScript Development Environment:2:2:OWA_Import_GetSubFolderID:1:8
+Sub OWA_Import_GetSubFolderID(parentfolder)
+	
+	ForAll ofolder In parentfolder.folders
+		folderindex%=folderindex%+1
+		ReDim Preserve folderlist(folderindex%)
+		folderlist(folderindex%)=ofolder.name & "|" & ofolder.EntryId
+		
+		'Rekursive Auslese der Unterordner
+		If ofolder.folders.count>0 Then
+			Call OWA_Import_GetSubFolderID(ofolder)
+		End If
+					
+	End ForAll
+		
+End Sub
+
+'++LotusScript Development Environment:2:2:OWA_Import_CreateDoc:1:8
+Sub OWA_Import_CreateDoc(MessageID$)
+		
+	'Importierte Nachricht
+	Dim memodoc As NotesDocument
+	Dim memobody As NotesRichTextItem
+	Dim accessitem As NotesItem
+	
+	Dim fileobject As NotesEmbeddedObject
+	
+	Dim MimeBody As NotesMIMEEntity
+	Dim HTMLmail As NotesMIMEEntity
+	Dim Header As NotesMIMEHeader
+	Dim Stream As NotesStream
+	
+	Dim mailitem
+	
+	Dim ReaderList(1) As String
+	ReaderList(0)="[Admin]"
+	ReaderList(1)="[Support]"	
+	
+	On Error GoTo errorhandler
+	
+	Set mailitem=App_NameSpace.GetItemFromID(MessageID$)
+	
+	Set memodoc=New NotesDocument(thisdb)		
+	memodoc.Form="F-Memo"
+	memodoc.DocType="F-Memo"
+	memodoc.DocuType="1"
+	memodoc.DocIsDraft=""
+	memodoc.Call_Number=CallNo$
+	memodoc.CALL_ORG_ID=thisdoc.Universalid	
+	memodoc.Subject=mailitem.Subject
+	memodoc.ReceivedAt=mailitem.ReceivedTime
+	memodoc.SendByMail=mailitem.SenderEmailAddress
+	memodoc.SendBy=mailitem.SenderName
+	
+	If mailitem.sent Then
+		memodoc.SendAt=mailitem.CreationTime
+	Else
+		memodoc.SendAt=mailitem.ReceivedTime
+	End If
+	
+	If mailitem.Class=olMail Then
+		memodoc.EditSendTo=Split(mailitem.To,";")
+		memodoc.EditCopyTo=Split(mailitem.CC,";")
+		memodoc.Outlook_Bodyformat=mailitem.BodyFormat
+	Else
+		Print "Mailitem-Class=" & CStr(mailitem.Class)
+	End If
+	
+	'Protokollzeile zum Test
+	'Call owalog.LogAction(thisdb.Title & " - Import Mail from " & memodoc.SendBy(0) & ", '" & memodoc.Subject(0) & "' ")
+	
+	memodoc.CreatedBy=session.UserName
+	memodoc.CreatedAt=Now()
+	
+	memodoc.Outlook_MessageID=MessageID$
+	memodoc.Outlook_ImportAt=Now()
+
+	'Ablage MSG
+	memotemppath$=TempDir$ & "outlook-mail.msg"
+	mailitem.SaveAs memotemppath$, olMSG
+	Set memobody=New NotesRichTextItem(memodoc,"MSG_File")
+	Set fileobject=memobody.EmbedObject(EMBED_ATTACHMENT, "", memotemppath$)
+	Kill memotemppath$
+
+	'Anhänge
+	If mailitem.Attachments.Count>0 Then
+		ForAll afile In mailitem.Attachments
+			'tmpfile$=TempDir$ & afile.DisplayName
+			tmpfile$=TempDir$ & afile.FileName			
+			afile.SaveAsFile tmpfile$
+			Set fileobject=memobody.EmbedObject(EMBED_ATTACHMENT, "", tmpfile$)
+			Kill tmpfile$
+		End ForAll		
+	End If
+	
+	'Übernahme HTML-Body als Text
+	If CStr(memodoc.Outlook_Bodyformat(0))=CStr(olFormatHTML) Then
+		
+		'Mail-Body im MIME-Format
+		Set Stream = Session.CreateStream
+		Session.ConvertMIME = False ' Aufheben der RichText Konvertierung
+		
+		Set MimeBody = memodoc.CreateMIMEEntity
+		
+		'Mail-Header-erstellen: Content-Type, charset
+		Set Header = MimeBody.CreateHeader("Content-Type") 'Header: Content-Type
+		Call Header.SetHeaderVal("multipart/alternative") '(Alternativ: ctype$="multipart/mixed" oder ctype$="text/html")
+		Set Header = Mimebody.CreateHeader("charset") 'Header: charset
+		Call Header.SetHeaderVal("ISO-8859-1")
+		
+		
+		Set HTMLmail = mimebody.CreateChildEntity
+		Call Stream.WriteText( _ 
+		DOCTYPE$ & HEAD1$ & HEAD2$ & HEAD3$ & HEAD4$ & HEAD5$ & HEAD6$ & HEAD7$ & "<body>") 'HTML-Head
+		
+		Call Stream.WriteText(mailitem.HTMLBody)
+		
+		Call Stream.WriteText("</body></html>") 'Taggs schliessen
+		
+		Call HTMLmail.SetContentFromText _ 
+		(Stream, "text/html;charset=ISO-8859-1", ENC_IDENTITY_BINARY)
+		Call Stream.Truncate
+		'ENDE Mailbody als HTML	
+		
+	Else	
+		Set memobody=New NotesRichTextItem(memodoc,"Body")
+		'memodoc.EditSendTo=CStr(Split(mailitem.Recipients,";"))
+		Call memobody.Appendtext(CStr(mailitem.Body))
+	End If
+	
+	Call memodoc.save(False,False)
+	
+	Exit Sub
+	
+errorhandler:
+	Call owalog.LogAction(thisdb.Title & " - Sub OWA_Import_Create_Doc - Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$)
+	Print "Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Resume errorexit
+
+errorexit:
+	Call OWA_InitLocalCache()
+	Call OWA_Import_Clean() 'Aufruf: temp. Einträge entfernen
+	Exit Sub
+		
+End Sub
+
+
+
+'++LotusScript Development Environment:2:2:OWA_Import:1:8
+Sub OWA_Import(ImportFrom$)
+	'ImportFrom$="0"~Persönliches Postfach; ImportFrom$="1"~Funktionspostfach
+	
+	Dim ws As New NotesUIWorkspace
+	
+	On Error GoTo errorhandler	
+	
+	Set owalog=New NotesLog(thisdb.Title & " - Outlook Nachrichtenimport extern")
+	Call owalog.OpenNotesLog(thisdb.Server,"- HSVV\IT-Bereich\HSVV-Agent-Log.nsf")
+	Call owalog.LogAction("GESTARTET: " & CallNo$ & " - Nachrichtenimport durch " & session.Commonusername)
+		
+	Set thisdoc=ws.Currentdocument.Document
+	If thisdoc Is Nothing Then
+		MsgBox "ABBRUCH: Falscher Kontext, keine Auftrag erfasst!",16, thisdb.Title
+		Call owalog.LogAction("ABBRUCH: Falscher Kontext, keine Auftrag erfasst!")
+		Exit Sub
+	End If
+	CallNo$=thisdoc.Call_Number(0)
+		
+	If Not OWA_Init() Then
+		Call owalog.LogAction("ABBRUCH: Outlook nicht initialisiert!")
+		Exit Sub
+	End If
+	
+	Call owalog.LogAction("Temporäres Verzeichnis: " & TempDir$)
+	
+	If OWA_Cache(ImportFrom$) Then
+		Call OWA_Import_Select() 'Aufruf: Import auswählen
+		Call OWA_Import_Clean() 'Aufruf: temp. Einträge entfernen
+	End If
+	
+	Call owalog.LogAction("BEENDET: " & CallNo$ & " - Nachrichtenimport durch " & session.Commonusername)
+	
+	Call ws.Viewrefresh()
+	
+	Exit Sub
+
+errorhandler:
+	Call owalog.LogAction(thisdb.Title & " - Sub OWA_Import - Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$)
+	Print "Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Resume errorexit
+
+errorexit:
+	Call OWA_Import_Clean() 'Aufruf: temp. Einträge entfernen
+	Exit Sub	
+		
+End Sub
+
+
+
+'++LotusScript Development Environment:2:1:OWA_Import_GetFolderID:1:8
+Function OWA_Import_GetFolderID() As String
+
+	Dim ws As New NotesUIWorkspace
+	Dim outlookFolder	
+	Dim tempdoc As NotesDocument
+	
+	OWA_Import_GetFolderID=""
+	
+	'Folder Inbox
+	Set outlookFolder=App_NameSpace.GetDefaultFolder(olFolderInbox)
+	folderindex%=0
+	ReDim Preserve folderlist(folderindex%)
+	folderlist(i%)=outlookFolder.name & "|" & outlookFolder.EntryId
+	
+	'Auslesen Unterordner (Inbox)
+	If outlookFolder.folders.count>0 Then
+		
+		Call OWA_Import_GetSubFolderID(outlookFolder)
+		
+	End If
+	
+	'Ordner Gesendet
+	Set outlookFolder=App_NameSpace.GetDefaultFolder(olFolderSentMail)
+	folderindex%=folderindex%+1
+	ReDim Preserve folderlist(folderindex%)	
+	folderlist(folderindex%)=outlookFolder.name & "|" & outlookFolder.EntryId
+	
+	Set tempdoc=New NotesDocument(thisdb)
+	tempdoc.FolderList=folderlist()
+	
+	If Not _
+	ws.Dialogbox("SF-OutlookFolder", True, True, False, False, False, False, thisdb.Title, tempdoc, False, False, True) _
+	Then
+		Exit Function	
+	End If	
+	
+	Call owalog.LogAction(thisdb.Title & " - Dialog Ordnerauswahl abgeschlossen")
+	OWA_Import_GetFolderID=tempdoc.Select_Folder(0)	
+		
+End Function
+
+
+
+
+
+'++LotusScript Development Environment:2:2:OWA_InitLocalCache:1:8
+Sub OWA_InitLocalCache()
+	
+	Dim owatemplate As NotesDatabase
+	Dim tempdoc As NotesDocument
+	
+	Set owacachedb=session.Getdatabase("", CacheDB_FilePath, False)
+	If owacachedb Is Nothing Then
+		Print "Lokale Cache Datenbank wird neu angelegt"		
+		Set owatemplate=New NotesDatabase("LNTEST1/INTERN", CacheDB_TemplatePath )
+		Set owacachedb=owatemplate.CreateFromTemplate("", "owacache.nsf", True )
+		cachedb.Title="Lokaler Outlook Cache"
+	Else
+		Print "Die lokale Cache Datenbank wird initialisiert"
+		Set owacachedb=session.Getdatabase("", "owacache.nsf", False)
+	End If
+	Sleep(0.2)
+
+End Sub
+
+
+
+'++LotusScript Development Environment:2:2:OWA_CreateCall_Init:1:8
+Sub OWA_CreateCall_Init(ImportFrom$)
+	'ImportFrom$="0"~Persönliches Postfach; ImportFrom$="1"~Funktionspostfach
+	
+	Dim ws As New NotesUIWorkspace
+	Set session=New NotesSession
+	Set thisdb=session.Currentdatabase
+	Set dbprofile=thisdb.GetProfileDocument("P-DB")
+	
+	On Error GoTo errorhandler
+	
+	Set owalog=New NotesLog(thisdb.Title & " - Outlook Nachrichtenimport extern")
+	Call owalog.OpenNotesLog(thisdb.Server,"- HSVV\IT-Bereich\HSVV-Agent-Log.nsf")
+	Call owalog.LogAction("GESTARTET: Erstellen Anfrage aus Mail durch " & session.Commonusername)
+	
+	If Not OWA_Init() Then
+		Call owalog.LogAction("ABBRUCH: Outlook nicht initialisiert!")
+		Exit Sub
+	End If
+	
+	Call owalog.LogAction("Temporäres Verzeichnis: " & TempDir$)
+	
+	If OWA_Cache(ImportFrom$) Then
+		Call OWA_CreateCall() 'Aufruf: Import auswählen				
+	End If
+	
+	Exit Sub
+
+errorhandler:
+	Call owalog.LogAction(thisdb.Title & " - Sub OWA_CreateCall_Init - Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$)
+	Print "Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Resume errorexit
+
+errorexit:
+	Call OWA_InitLocalCache()
+	Call OWA_Import_Clean() 'Aufruf: temp. Einträge entfernen	
+	Exit Sub		
+
+End Sub
+
+
+
+'++LotusScript Development Environment:2:2:OWA_Import_Select:1:8
+Sub OWA_Import_Select()
+	
+	Dim ws As New NotesUIWorkspace
+
+	Dim selection As NotesDocumentCollection
+	Dim refdoc As NotesDocument
+	
+	Set selection=ws.Picklistcollection(3, True, owacachedb.Server,owacachedb.Filepath,CacheDB_Inbox, owacachedb.Title, "Bitte wählen:")
+	Call owalog.LogAction(owacachedb.Title & " - Nachrichten gewählt:" & CStr(selection.Count))
+
+	i%=0
+	Set refdoc=selection.Getfirstdocument()
+	Do Until refdoc Is Nothing
+		If refdoc.MessageID(0)<>"" Then
+			i%=i%+1
+			Call OWA_Import_CreateDoc(refdoc.MessageID(0))
+		End If
+
+		Set refdoc=selection.Getnextdocument(refdoc)
+	Loop
+	
+	MsgBox "Es wurden " & CStr(i%) & " Nachrichten übernommen!", 64, thisdb.Title
+			
+End Sub
+
+'++LotusScript Development Environment:2:2:MEMO_SetPrincipal:1:8
+Sub MEMO_SetPrincipal()
+	
+	Dim ws As New NotesUIWorkspace
+	Dim tempdoc As NotesDocument
+	
+	Set tempdoc=New NotesDocument(thisdb)
+	tempdoc.Select_Folder=thisdoc.Mail_Principal(0)
+	tempdoc.FolderList=thisdoc.sendfromlist
+	
+	If Not _
+	ws.Dialogbox("SF-OutlookFolder", True, True, False, False, False, False, thisdb.Title, tempdoc, False, False, True) _
+	Then
+		Exit Sub	
+	End If	
+	
+	thisdoc.Mail_Principal=tempdoc.Select_Folder(0)
+	
+	Call ws.Currentdocument.Refresh(True, True)
+	Call ws.Viewrefresh()
+		
+End Sub
+
+'++LotusScript Development Environment:2:2:OWA_SetPrincipal:1:8
+Sub OWA_SetPrincipal
+	
+	Dim ws As New NotesUIWorkspace
+	Dim tempdoc As NotesDocument
+	Dim lookupview As NotesView
+	Dim mailindoc As NotesDocument	
+	Dim rlist() As String
+		
+	i%=0
+	If dbprofile.DefaultSendFrom(0)<>"" then
+		ReDim Preserve rlist(i%)
+		rlist(i%)=dbprofile.DefaultSendFrom(0)
+		i%=i%+1	
+	End If	
+		
+	If UserMailAddress$<>"" Then
+		ReDim Preserve rlist(i%)
+		rlist(i%)=UserMailAddress$
+		i%=i%+1
+	End If		
+		
+	'Konfigurierte Funktionspostfächer
+	Set lookupview=thisdb.Getview("V-Admin-90")
+	Set mailindoc=lookupview.Getfirstdocument()
+	Do Until mailindoc Is Nothing
+		If mailindoc.MailSystem(0)="1" Then
+			ReDim Preserve rlist(i%)
+			rlist(i%)=mailindoc.Mailin_Address(0)
+			i%=i%+1	
+		End If	
+		Set mailindoc=lookupview.Getnextdocument(mailindoc)
+	Loop
+	
+	Set tempdoc=New NotesDocument(thisdb)
+	tempdoc.FolderList=rlist()
+	
+	If Not _
+	ws.Dialogbox("SF-OutlookFolder", True, True, False, False, False, False, thisdb.Title, tempdoc, False, False, True) _
+	Then
+		Exit Sub	
+	End If	
+		
+	thisdoc.Outlook_Principal=tempdoc.Select_Folder(0)
+	
+	Call ws.Currentdocument.Refresh(True, True)
+	Call ws.Viewrefresh()
+	
+End Sub
+
+'++LotusScript Development Environment:2:2:OWA_Import_Clean:1:8
+Sub OWA_Import_Clean()
+	
+	Dim importview As NotesView
+	Dim delcol As NotesDocumentCollection
+
+	Set importview=owacachedb.Getview(CacheDB_Inbox)
+	Call importview.AllEntries.RemoveAll(True)
+	
+	Call owalog.LogAction(thisdb.Title & " - Temporäre Mailliste entfernt")
+	
+End Sub
+
+'++LotusScript Development Environment:2:1:OWA_Init:1:8
+Function OWA_Init() As Boolean
+	
+	OWA_Init=True
+	
+	Set App=CreateObject("Outlook.Application")
+	If App Is Nothing Then
+		MsgBox "Microsoft Outlook ist nicht installiert!",16, thisdb.Title
+		OWA_Init=False
+		Exit Function
+	End If
+		
+	Set App_NameSpace=App.GetNameSpace("MAPI")
+	If App_NameSpace.Accounts.Count=0 Then
+		MsgBox "Kein Outlook Account eingerichtet!", 32, thisdb.Title
+		OWA_Init=False
+	End If
+	
+	TempDir$ = Environ("Temp") & "\"	
+		
+End Function
+
+'++LotusScript Development Environment:2:2:OWA_SetRecipients:1:8
+Sub OWA_SetRecipients()
+	
+	Dim ws As New NotesUIWorkspace
+	Dim AppDialog
+	
+	'Liste der Empfänger	
+	Dim stlist() As String
+	Dim ctlist() As String
+	Dim btlist() As String
+	Dim rclist() As String
+	Dim stlist_smtp() As String
+	Dim ctlist_smtp() As String
+	Dim btlist_smtp() As String
+	Dim rclist_smtp() As String
+
+	'On Error GoTo errorhandler	
+
+	If Not OWA_Init() Then
+		Exit Sub
+	End If
+	
+	Set AppDialog = App_NameSpace.GetSelectNamesDialog 'Adressdialog initialisieren
+	
+	'Vorbelegung Adressdialog
+	AppDialog.ShowOnlyInitialAddressList = False 'Auswahl der Adressliste zulassen
+	AppDialog.NumberOfRecipientSelectors=olToCcBcc 'Alle Adresszeilen anzeigen
+	'Vorbelegung TO, CC und BCC
+	If thisdoc.EditSendTo(0)<>"" Then 'TO
+		ForAll r In thisdoc.EditSendTo
+			Set myRecp=AppDialog.Recipients.Add(r)
+			myRecp.Type=olTo
+		End ForAll
+	End If
+	If thisdoc.EditCopyTo(0)<>"" Then 'CC
+		ForAll r In thisdoc.EditCopyTo
+			Set myRecp=AppDialog.Recipients.Add(r)
+			myRecp.Type=olCC
+		End ForAll
+	End If
+	If thisdoc.EditBlindCopyTo(0)<>"" Then 'BCC
+		ForAll r In thisdoc.EditBlindCopyTo
+			Set myRecp=AppDialog.Recipients.Add(r)
+			myRecp.Type=olBCC
+		End ForAll
+	End If
+		
+	AppDialog.Display 'Adressdialog Anzeigen	
+	Set recipients=AppDialog.Recipients 'Empfänger übernehmen
+	
+	If recipients.Count=0 Then Exit Sub
+	
+	rc%=0
+	st%=0
+	cc%=0
+	bc%=0
+	
+	ForAll rname In recipients
+				
+		ReDim Preserve rclist(rc%)
+		ReDim Preserve rclist_smtp(rc%)
+		'rclist(rc%)=rname.Address
+		rclist(rc%)=rname.name
+		rclist_smtp(rc%)=rname.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x39FE001E")		
+		rc%=rc%+1
+		
+		If rname.Type=olTo Then
+			ReDim Preserve stlist(st%)
+			ReDim Preserve stlist_smtp(st%)
+			'stlist(st%)=rname.Address
+			stlist(st%)=rname.name
+			stlist_smtp(st%)=rname.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x39FE001E")		
+			st%=st%+1
+		End If
+		
+		If rname.Type=olCC Then
+			ReDim Preserve ctlist(ct%)
+			ReDim Preserve ctlist_smtp(ct%)
+			'ctlist(ct%)=rname.Address
+			ctlist(ct%)=rname.name
+			ctlist_smtp(ct%)=rname.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x39FE001E")		
+			ct%=ct%+1
+		End If
+		
+		If rname.Type=olBCC Then
+			ReDim Preserve btlist(bt%)
+			ReDim Preserve btlist_smtp(bt%)
+			'btlist(bt%)=rname.Address
+			btlist(bt%)=rname.name			
+			btlist_smtp(bt%)=rname.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x39FE001E")
+			bt%=bt%+1
+		End If		
+		
+	End ForAll
+	
+	thisdoc.EditSendTo=stlist()
+	thisdoc.EditCopyTo=ctlist()
+	thisdoc.EditBlindCopyTo=btlist()
+	thisdoc.recipients=rclist()
+	
+	thisdoc.smtp_EditSendTo=stlist_smtp()
+	thisdoc.smtp_EditCopyTo=ctlist_smtp()
+	thisdoc.smtp_EditBlindCopyTo=btlist_smtp()
+	thisdoc.smtp_recipients=rclist_smtp()
+	
+	
+%REM
+	ForAll rname In recipients
+		print rname.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x39FE001E")	
+	End ForAll
+%END REM 
+	
+
+	Call ws.Currentdocument.Refresh(True, True)
+	Call ws.Viewrefresh()
+	
+	Exit Sub
+
+errorhandler:
+	MessageBox "Line " & Str(Erl) & " ,Error" & Str(Err) & ": " & Error$ & Chr(13) & rclist(rc%)
+	Print "Error" & Str(Err) & ": " & Error$
+	Resume errorexit
+
+errorexit:
+	Exit Sub
+	
+End Sub
+
+'++LotusScript Development Environment:2:1:OWA_Import_GetRecipient:1:8
+Function OWA_Import_GetRecipient() As String
+	
+	Dim ws As New NotesUIWorkspace
+	Dim tempdoc As NotesDocument
+	Dim lookupview As NotesView
+	Dim mailindoc As NotesDocument	
+	Dim rlist() As String
+	
+	OWA_Import_GetRecipient=""
+	
+	Set lookupview=thisdb.Getview("V-Admin-90")
+	Set mailindoc=lookupview.Getfirstdocument()
+	i%=0
+	Do Until mailindoc Is Nothing
+		If mailindoc.MailSystem(0)="1" Then
+			ReDim Preserve rlist(i%)
+			rlist(i%)=mailindoc.Mailin_Name(0)
+			i%=i%+1	
+		End If	
+		Set mailindoc=lookupview.Getnextdocument(mailindoc)
+	Loop
+
+%REM
+	i%=0
+	ForAll r In dbprofile.MailInList
+		ReDim Preserve rlist(i%)
+		rlist(i%)=r
+		i%=i%+1
+	End ForAll
+%END REM	
+	
+	Set tempdoc=New NotesDocument(thisdb)
+	tempdoc.FolderList=rlist()
+	
+	If Not _
+	ws.Dialogbox("SF-OutlookFolder", True, True, False, False, False, False, thisdb.Title, tempdoc, False, False, True) _
+	Then
+		Exit Function	
+	End If	
+	
+	Call owalog.LogAction(thisdb.Title & " - Dialog Ordnerauswahl abgeschlossen")
+	
+	OWA_Import_GetRecipient=tempdoc.Select_Folder(0)	
+	
+End Function
+
+'++LotusScript Development Environment:2:2:OWA_CreateCall_PostSave:1:8
+Sub OWA_CreateCall_PostSave()
+	
+	Dim mailitem
+	
+	On Error GoTo errorhandler
+	
+	Set owalog=New NotesLog(thisdb.Title & " - Outlook Nachrichtenimport extern")
+	Call owalog.OpenNotesLog(thisdb.Server,"- HSVV\IT-Bereich\HSVV-Agent-Log.nsf")
+	Call owalog.LogAction("BEGINN - PostSave: Erstellen Anfrage aus Mail durch " & session.Commonusername)
+
+
+	If Not OWA_Init() Then		
+		Exit Sub
+	End If
+	
+	CallNo$=thisdoc.Call_Number(0)
+	Call OWA_Import_CreateDoc(thisdoc.Outlook_MessageID(0))
+	Set mailitem=App_NameSpace.GetItemFromID(thisdoc.Outlook_MessageID(0))
+	
+	mailitem.Subject=CStr(mailitem.Subject) & " > " & CallNo$ & " " & thisdb.Title
+	mailitem.Save
+	
+	thisdoc.Flag_OrgID_Processed="1"
+	Call thisdoc.Save(False,False)
+	
+	Call owalog.LogAction("ENDE - PostSave: Erstellen Anfrage aus Mail durch " & session.Commonusername)
+	
+	Exit Sub
+	
+errorhandler:
+	Call owalog.LogAction(thisdb.Title & " - Sub OWA_CreateCall_Init - Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$)
+	Print "Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Resume errorexit
+
+errorexit:
+	Call OWA_InitLocalCache()
+	Call OWA_Import_Clean() 'Aufruf: temp. Einträge entfernen	
+	Exit Sub
+			
+End Sub
+
+'++LotusScript Development Environment:2:1:OWA_Cache:1:8
+Function OWA_Cache(ImportFrom$) As Boolean
+	
+	Dim mailin_Recipient 'Funktions-Mailbox
+	Dim mailin$
+	
+	On Error GoTo errorhandler	
+	
+	OWA_Cache=True
+	
+	If ImportFrom$="0" Then
+		'Auswahl aus persönlichen Postfach
+		Folder_ID$=OWA_Import_GetFolderID()
+		If Folder_ID$="" Then
+			Call owalog.LogAction("ABBRUCH: Kein Ordner gewählt!")
+			OWA_Cache=False
+			Exit Function
+		End If		
+		Set importFolder=App_NameSpace.GetFolderFromID(Folder_ID$)		
+	End If
+	
+	If ImportFrom$="1" Then
+		mailin$=OWA_Import_GetRecipient()
+		If mailin$="" Then
+			Call owalog.LogAction("ABBRUCH: Kein Funktionspostfach gewählt!")
+			OWA_Cache=False
+			Exit Function
+		End If		  
+		Set mailin_Recipient=App_NameSpace.CreateRecipient(mailin$)
+		
+		'Prüfen, ob der Namen des Funktionspostfachs aufgelöst werden kann
+		mailin_Recipient.Resolve 
+		If Not mailin_Recipient.Resolved Then 
+			MessageBox "Das Funktionspostfach '" & mailin$ & "'kann  nicht gefunden werden!", 16, thisdb.Title
+			OWA_Cache=False
+			Exit Function
+		End If		
+		Set importFolder=App_NameSpace.GetSharedDefaultFolder(mailin_Recipient, olFolderInbox) 'Inbox der Mailin-DB	
+	End If
+
+	If importFolder.Items.Count>0 Then
+		Call OWA_InitLocalCache()
+		Call OWA_Import_RefList(importfolder)		
+	Else
+		MsgBox "Dieser Ordner enthält keine Nachrichten", 64, thisdb.Title
+		Call owalog.LogAction("ABBRUCH: Ordner enthält keine Nachrichten!")
+		OWA_Cache=False
+		Exit Function
+	End If
+	
+	Exit Function
+
+errorhandler:
+	Call owalog.LogAction(thisdb.Title & " - Sub OWA_Cache - Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$)
+	Print "Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Resume errorexit
+
+errorexit:
+	Call OWA_InitLocalCache()
+	Call OWA_Import_Clean() 'Aufruf: temp. Einträge entfernen
+	OWA_Cache=False
+	Exit Function		
+		
+End Function
+
+'++LotusScript Development Environment:2:2:OWA_Import_RefList:1:8
+Sub OWA_Import_RefList(importfolder)
+	
+	Dim refdoc As NotesDocument
+	Dim accessitem As NotesItem
+	
+	On Error GoTo errorhandler	
+	
+	refcat$=session.Commonusername & " " & CStr(Today)
+	
+	i%=0
+	
+	Call owalog.LogAction(thisdb.Title & " - Beginn temporäre Mailliste erstellen")
+	
+	ForAll mailitem In importfolder.items
+		Set refdoc=New NotesDocument(owacachedb)
+		refdoc.Form="F-Inbox"
+		refdoc.DocType="F-Inbox"
+		refdoc.refcat=refcat$
+		
+		Set accessitem=New NotesItem(refdoc,"RefAuthor",session.Username,AUTHORS)
+		
+		If mailitem.Class=olMail Then
+			refdoc.EditSendTo=mailitem.To
+			refdoc.EditCopyTo=mailitem.CC
+		End If 
+
+		refdoc.MessageID=mailitem.EntryID
+		refdoc.MailReceivedTime=mailitem.ReceivedTime
+		refdoc.MailSenderName=mailitem.SenderName
+		refdoc.MailSize=mailitem.Size
+		refdoc.MailSubject=mailitem.Subject
+		
+		If refdoc.Save(False,False) Then
+			i%=i%+1
+		End If
+		
+	End ForAll
+	
+	Call owalog.LogAction(thisdb.Title & " - Ende temporäre Mailliste erstellen, Umfang: " & CStr(i%))
+	Sleep(0.2)
+	
+	Exit Sub
+	
+errorhandler:
+	Call owalog.LogAction(thisdb.Title & " - Sub OWA_Import_RefList - Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$)
+	Print "Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Resume Next
+
+errorexit:
+	Call OWA_Import_Clean() 'Aufruf: temp. Einträge entfernen
+	Exit Sub
+		
+End Sub

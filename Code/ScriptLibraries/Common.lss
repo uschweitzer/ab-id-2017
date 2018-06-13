@@ -1,0 +1,1910 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class DB_Base
+Declare Class DB_IPB As DB_Base
+Declare Class DB_ORGA As DB_Base
+Declare Class DB_TAB As DB_Base
+Declare Public Class DOC_Base
+Declare Sub Initialize
+Declare Sub Call_SendLink()
+Declare Function Call_QuerySave(uidoc As NotesUIDocument)
+Declare Function DOC_QueryMode(uidoc As NotesUIDocument) As Boolean 'AB ID
+Declare Function GetSrvHost() As String
+Declare Public Function QuickSort(sArray As Variant)
+Declare Sub GenerateRepeatList
+Declare Sub Call_SetEditor()
+Declare Sub Call_GetTargetAddress()
+Declare Sub PDB_PostSave()
+Declare Sub X_ChangeCallEditor1
+Declare Sub Call_SelectCallBy()
+Declare Sub QuickSort_DoInsertSort ( sA() As String, Byval bottom As Long, Byval top As Long )	
+Declare Sub Doc_Init(uidoc As NotesUIDocument)
+Declare Sub Call_Close()
+Declare Sub PDB_PostOpen(uidoc As NotesUIDocument) 'BA4
+Declare Sub PDB_InitCounter
+Declare Sub Call_PostSave(uidoc As NotesUIDocument)
+Declare Sub Call_ChangeEditor
+Declare Sub Call_GetNumber(calldoc As NotesDocument)
+Declare Sub QuickSort_Do( sA() As String, bottom As Long, top As Long )
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Dim ws As NotesUIWorkspace
+Dim session As NotesSession
+
+'Databases
+Dim thisdb As NotesDatabase
+
+'Documents
+Dim thisdoc As NotesDocument
+Dim dbprofile As NotesDocument
+
+'UI-Documents
+Dim thisuidoc As NotesUIDocument
+
+'Genutzte Datenbanken
+Dim tbook As DB_TAB
+Dim orgadb As DB_ORGA
+Dim ipbdb As DB_IPB
+
+'Dokumentklassen
+Dim basedoc As DOC_Base 'Standarddokument
+
+'Agents
+Dim dbagent As NotesAgent
+
+'Flags
+Dim RunValidation As Boolean
+
+'Quicksort
+Dim SortedArray As Variant
+
+
+
+'Alias Ansicht
+Const Lookup_FULLNAME$="($Users)"
+Const Lookup_IPB$="V-IPB-Import-04"
+Const Lookup_ORGA_PG_Cat$="V-Admin-10" 'Auswahl Projektgruppe allgemein
+Const Lookup_ORGA_PG_Flat$="V-Admin-11"
+Const Lookup_ORGA_PG_BA3$="V-Admin-12" 'Auswahl Projektgruppe BA3
+Const Lookup_TAB$="V-TEL-A06"
+
+'HTML-Header
+Const DOCTYPE$="<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Frameset//EN'>"
+Const HEAD1$="<html><head><meta http-equiv='content-type' content='text/html; charset=ISO-8859-1'>"
+Const HEAD2$="<style>"
+Const HEAD3$="body {font-family: Arial, Verdana, sans-serif;font-size: 9pt }"
+Const HEAD4$="p {margin-top: 10px;}"
+Const HEAD5$="a {color: #054295; font-weight: bold; font-size: 9pt;text-decoration: none; cursor: pointer;}"
+Const HEAD6$="a:hover { color: #D62020; font-weight: bold;}"
+Const HEAD7$="</style></head>"
+
+Public Class DB_Base
+	'Basisklasse für genutzte Datenbanken (z.B. aus dem Profil)
+	Public db_filepath As String
+	Public db_name As String 
+	Public db_server As String
+	Public db As NotesDatabase
+
+	Sub New(doc As NotesDocument,dbshortcut$)
+		
+		If doc.Getitemvalue(dbshortcut$ & "_Path")(0)="" Then Exit Sub
+		
+		me.db_filepath=doc.Getitemvalue(dbshortcut$ & "_Path")(0)
+		me.db_name=doc.Getitemvalue(dbshortcut$ & "_Title")(0)
+		me.db_server=doc.Getitemvalue(dbshortcut$ & "_Server")(0)
+		Set db=session.Getdatabase(db_server, db_filepath, False)
+		
+	End Sub
+End Class
+
+
+
+
+
+Class DB_IPB As DB_Base
+	'Anbindung/Funktionen IPB Import
+	Sub New(doc As NotesDocument,dbshortcut$)
+		'cf. DB_Base 
+	End Sub
+	
+	Sub GetProject(doc As NotesDocument)
+		'Auswahl PSP-Element aus IPB-Connect
+		Dim ws As New NotesUIWorkspace
+		Dim picklistcollection As NotesDocumentCollection
+		Dim selecteddoc As NotesDocument
+		Dim stationitem As NotesItem
+		
+		'Auswahl PSP (Auswahlansicht cf. Declaration)
+		Set picklistcollection= _ 
+		ws.PickListCollection(3,False,db_Server,db_filepath,Lookup_IPB$,thisdb.Title,"Auswahl:")
+		
+		'Abbruch falls keine Auswahl getroffen
+		If picklistcollection.Count=0 Then 	Exit Sub
+		
+		'Entfernt Flag 'Nicht-IPB' bei Auswahl
+		doc.Call_NichtIPB=""
+				
+		'Ausgewählte Maßnahme
+		Set selecteddoc=picklistcollection.GetFirstDocument
+		
+		'BEGINN: Übertrag gewählte Maßnahme
+		'ORACLE-IDs
+		If selecteddoc.HasItem("BAUMASSNAHMEN_ID") Then
+			doc.ORACLE_BAUMASSNAHMEN_ID=selecteddoc.BAUMASSNAHMEN_ID(0)
+		Else
+			Call doc.RemoveItem("ORACLE_BAUMASSNAHMEN_ID") 'entfernen eines ggfs. zuvor gesetzten Wertes
+		End If
+		If selecteddoc.HasItem("LOS_ID") Then
+			doc.ORACLE_LOS_ID=selecteddoc.LOS_ID(0)
+		Else
+			Call doc.RemoveItem("ORACLE_LOS_ID") 'entfernen eines ggfs. zuvor gesetzten Wertes
+		End If
+			
+		'STRASSENKLASSE
+		If selecteddoc.HasItem("STRASSENKLASSE") Then
+			doc.Call_Description_1=selecteddoc.STRASSENKLASSE(0) 'Bezeichnung ZAB alt
+			doc.Call_STRASSENKLASSE=selecteddoc.STRASSENKLASSE(0) 'Standard Auftragsbuch
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			Call doc.RemoveItem("Call_Description_1")
+			Call doc.RemoveItem("Call_STRASSENKLASSE")
+		End If
+		
+		'STRASSENNUMMER
+		If selecteddoc.HasItem("STRASSENNUMMER") Then
+			doc.Call_Description_2=CStr(selecteddoc.STRASSENNUMMER(0)) 'Bezeichnung ZAB alt
+			doc.Call_STRASSENNUMMER=CStr(selecteddoc.STRASSENNUMMER(0)) 'Standard Auftragsbuch
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			Call doc.RemoveItem("Call_Description_2")
+			Call doc.RemoveItem("Call_STRASSENNUMMER")
+		End If
+		
+		'PROJEKTNAME
+		If selecteddoc.HasItem("PROJEKTNAME") Then
+			doc.Call_Description=selecteddoc.PROJEKTNAME(0)
+			doc.Call_PROJEKTNAME=selecteddoc.PROJEKTNAME(0)
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			Call doc.RemoveItem("Call_Description") 
+			Call doc.RemoveItem("Call_PROJEKTNAME") 
+		End If
+		
+		'BAULASTTRAEGER
+		If selecteddoc.HasItem("BAULASTTRAEGER") Then
+			doc.Call_BAULASTTRAEGER=selecteddoc.BAULASTTRAEGER(0)
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			Call doc.RemoveItem("Call_BAULASTTRAEGER")
+		End If
+		
+		'HESSEN_ID
+		If selecteddoc.HasItem("HESSEN_ID") Then
+			doc.Call_HESSEN_ID=selecteddoc.HESSEN_ID(0)
+		Else
+			Call doc.RemoveItem("Call_HESSEN_ID") 'entfernen eines ggfs. zuvor gesetzten Wertes
+		End If
+		
+		'PSP_ELEMENT
+		If selecteddoc.HasItem("PSP_ELEMENT") Then
+			doc.Call_PSP_ELEMENT=selecteddoc.PSP_ELEMENT(0) 'PSP: HID, Lokation
+			doc.Call_Element=Left(selecteddoc.PSP_ELEMENT(0),12) 'PSP: Los
+			doc.Call_Element_1=Right(selecteddoc.PSP_ELEMENT(0),2) 'PSP: Phase
+			If Right(selecteddoc.PSP_ELEMENT(0),2)="00" Then
+				doc.Call_Element_2="P3"
+			Else
+				doc.Call_Element_2="B3"
+			End If
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			Call doc.RemoveItem("Call_PSP_ELEMENT")
+			Call doc.RemoveItem("Call_Element")
+			Call doc.RemoveItem("Call_Element_1")
+			Call doc.RemoveItem("Call_Element_2")
+		End If
+		
+		'IPB TEAM, TEAMNAME
+		If selecteddoc.HasItem("TEAM") Then
+			doc.IPB_TEAM=selecteddoc.TEAM(0)
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			doc.IPB_TEAM=""
+		End If	
+		If selecteddoc.HasItem("TEAMNAME") Then
+			doc.IPB_TEAMNAME=selecteddoc.TEAMNAME(0)
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			doc.IPB_TEAMNAME=""
+		End If	
+		
+		'IPB SPARTEN_KOSTENSTELLE, SPARTEN_KOSTENSTELLE_NAME
+		If selecteddoc.HasItem("SPARTEN_KOSTENSTELLE") Then
+			doc.IPB_SPARTEN_KOSTENSTELLE=selecteddoc.SPARTEN_KOSTENSTELLE(0)
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			doc.IPB_SPARTEN_KOSTENSTELLE=""
+		End If	
+		If selecteddoc.HasItem("SPARTEN_KOSTENSTELLE_NAME") Then
+			doc.IPB_SPARTEN_KOSTENSTELLE_NAME=selecteddoc.SPARTEN_KOSTENSTELLE_NAME(0)
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			doc.IPB_IPB_SPARTEN_KOSTENSTELLE_NAME=""
+		End If	
+		
+		'MASSNAHMENART
+		If selecteddoc.HasItem("MASSNAHMENART") Then
+			doc.Call_ArtMassn=selecteddoc.MASSNAHMENART(0)  'Bezeichnung ZAB alt
+			doc.Call_MASSNAHMENART=selecteddoc.MASSNAHMENART(0)
+		Else
+			'entfernen eines ggfs. zuvor gesetzten Wertes
+			Call doc.RemoveItem("Call_ArtMassn")
+			Call doc.RemoveItem("Call_MASSNAHMENART")
+		End If
+		
+		'BAUBEGINN (IPB)
+		If selecteddoc.HasItem("BAUBEGINN") Then
+			doc.Call_BAUBEGINN=Format$(selecteddoc.BAUBEGINN(0),"Short Date")
+		Else
+			Call doc.RemoveItem("Call_BAUBEGINN") 'entfernen eines ggfs. zuvor gesetzten Wertes
+		End If
+		
+		'Länge Baustelle
+		If selecteddoc.HasItem("LAENGE") Then
+			doc.Call_LAENGE=Trim(selecteddoc.LAENGE(0))
+		Else
+			Call doc.RemoveItem("Call_LAENGE") 'entfernen eines ggfs. zuvor gesetzten Wertes
+		End If
+				
+		'STATIONIERUNGEN entfernen
+		If doc.HasItem("Call_IPB_StatRows") Then
+			If doc.Call_IPB_StatRows(0)>5 Then
+				row%=doc.Call_IPB_StatRows(0)
+			Else
+				row%=5
+			End If			
+		Else
+			row%=5
+		End If
+		For i%=0 To row%
+			If i%=0 Then
+				k%=1
+				j%=2
+			Else
+				k%=10
+				j%=20
+			End If
+						
+			Call doc.replaceitemvalue("Call_Richtung_" & CStr(k%+i%),"")
+			Call doc.replaceitemvalue("Call_NKBeginn_" & CStr(k%+i%),"")
+			Call doc.replaceitemvalue("Call_NKBeginn_" & CStr(j%+i%),"")
+			Call doc.replaceitemvalue("Call_km_" & CStr(k%+i%),"")
+			Call doc.replaceitemvalue("Call_NKEnde_" & CStr(k%+i%),"")
+			Call doc.replaceitemvalue("Call_NKEnde_" & CStr(j%+i%),"")
+			Call doc.replaceitemvalue("Call_km_" & CStr(j%+i%),"")
+			Call doc.replaceitemvalue("Call_BAB_Beginn_" & CStr(k%+i%),"")
+			Call doc.replaceitemvalue("Call_BAB_Ende_" & CStr(j%+i%),"")		
+		Next		
+		'STATIONIERUNGEN setzen
+		If selecteddoc.HasItem("STATIONIERUNGEN_INKL_BABKM") Then
+			
+			MV=Split(selecteddoc.STATIONIERUNGEN_INKL_BABKM(0),"#")
+			statcount%=UBound( MV )
+			
+			For i%=0 To statcount%-1
+				
+				stat$=MV(i%) 'Stationierungsstring
+			
+				If i%=0 Then
+					k%=1
+					j%=2
+				Else
+					k%=10
+					j%=20
+				End If				
+				
+				'Richtung
+				stat_R$=Left(stat$,1)
+				Set stationitem=doc.replaceitemvalue("Call_Richtung_" & CStr(k%+i%),stat_R$)
+				
+				'NK-Beginn-1
+				'stat$=Right(stat$,48)				
+				stat_B1$=Right(Left(stat$,8),7)
+				Set stationitem=doc.replaceitemvalue("Call_NKBeginn_" & CStr(k%+i%),stat_B1$)
+				
+				'NK-Beginn-2
+				'stat$=Right(stat$,41)
+				stat_B2$=Right(Left(stat$,16),7)
+				Set stationitem=doc.replaceitemvalue("Call_NKBeginn_" & CStr(j%+i%),Trim(stat_B2$))
+				
+				'KM-1
+				'stat$=Right(stat$,33)
+				stat_KM1$=Right(Left(stat$,24),7)
+				Set stationitem=doc.replaceitemvalue("Call_km_" & CStr(k%+i%),Trim(stat_KM1$))
+				
+				'BAB-KM-Anfang
+				stat_BAB1$=Right(Left(stat$,32),7)
+				Set stationitem=doc.replaceitemvalue("Call_BAB_Beginn_" & CStr(k%+i%),Trim(stat_BAB1$))
+				
+				'NK-Ende-1
+				'stat$=Right(stat$,23)
+				stat_E1$=Right(Left(stat$,41),7)
+				Set stationitem=doc.replaceitemvalue("Call_NKEnde_" & CStr(k%+i%),Trim(stat_E1$))
+				
+				'NK-Ende-2
+				'stat$=Right(stat$,16)
+				stat_E2$=Right(Left(stat$,49),7)
+				Set stationitem=doc.replaceitemvalue("Call_NKEnde_" & CStr(j%+i%),Trim(stat_E2$))
+				
+				'KM-2
+				stat_KM2$=Right(Left(stat$,57),7)
+				Set stationitem=doc.replaceitemvalue("Call_km_" & CStr(j%+i%),Trim(stat_KM2$))
+				
+				'BAB-KM-Ende
+				stat_BAB2$=Right(stat$,7)
+				Set stationitem=doc.replaceitemvalue("Call_BAB_Ende_" & CStr(j%+i%),Trim(stat_BAB2$))
+			Next
+			
+			'Formatanpassung BA3
+			If Trim(doc.Call_NKBeginn_1(0))="" Then 
+				doc.Call_NKBeginn_1="-"		
+			End If
+			If Trim(doc.Call_NKBeginn_2(0))="" Then 
+				doc.Call_NKBeginn_2="-"		
+			End If
+			If Trim(doc.Call_km_1(0))="" Then 
+				doc.Call_km_1="-"		
+			End If
+			If Trim(doc.Call_km_2(0))="" Then 
+				doc.Call_km_2="-"		
+			End If
+			If Trim(doc.Call_NKEnde_1(0))="" Then 
+				doc.Call_NKEnde_1="-"		
+			End If
+			If Trim(doc.Call_NKEnde_2(0))="" Then 
+				doc.Call_NKEnde_2="-"		
+			End If
+						
+			doc.Call_IPB_StatRows=statcount%-1
+			doc.ORACLE_Selected_At=Now()
+			doc.ORACLE_NOTFOUND=""
+			doc.Call_IPBTransfer="Daten aus IPB"					
+		End If			
+		'ENDE: Übertrag gewählte Maßnahme
+		
+		'Bildschirm aktualisieren
+		Call ws.CurrentDocument.Refresh
+						
+	End Sub
+End Class
+
+
+
+
+
+
+Class DB_ORGA As DB_Base
+	'Anbindung/Funktionen AB Verteiler (Organisationseinheiten)
+	Sub New(doc As NotesDocument,dbshortcut$)
+		'cf. DB_Base 
+	End Sub
+	
+	Sub GetPG(doc As NotesDocument)
+		Dim ws As New NotesUIWorkspace
+		Dim picklistcollection As NotesDocumentCollection
+		Dim selecteddoc As NotesDocument
+
+		Pick_List$=Lookup_ORGA_PG_BA3$
+			
+		'Auswahl PG (Auswahlansicht cf. Declaration)
+		Set picklistcollection= _ 
+		ws.PickListCollection(3,False,db_Server,db_filepath,Pick_List$,thisdb.Title,"Auswahl:")
+		
+		'Abbruch falls keine Auswahl getroffen
+		If picklistcollection.Count=0 Then 	Exit Sub
+		
+		Set selecteddoc=picklistcollection.GetFirstDocument
+		Call doc.ReplaceItemValue("PG_Name",selecteddoc.PG_Name)
+		Call doc.ReplaceItemValue("PG_ShortName",selecteddoc.PG_ShortName)
+		
+		If selecteddoc.PG_Reader(0)<>"" Then
+			Call doc.ReplaceItemValue("PGReader",selecteddoc.PG_Reader) 'alte Feldbezeichung ZAB
+		Else
+			Call doc.ReplaceItemValue("PGReader","*") 'alte Feldbezeichung ZAB
+		End If
+		Call doc.ReplaceItemValue("PGAuthor",selecteddoc.PG_Authors) 'alte Feldbezeichung ZAB
+		'Mailgruppen
+		Call doc.ReplaceItemValue("Call_TLMail",selecteddoc.PG_TeamleiterMail)
+		Call doc.ReplaceItemValue("Call_PBMail",selecteddoc.PG_PBMail)
+		Call doc.ReplaceItemValue("Call_DezMail",selecteddoc.PG_DezMail)
+		
+		'Bildschirm aktualisieren
+		Call ws.CurrentDocument.Refresh
+	
+	End Sub
+
+	Sub GetDepartment(doc As NotesDocument,DepNo$)
+		Dim ws As New NotesUIWorkspace
+		Dim lookupview As NotesView
+		Dim lookupcol As NotesDocumentCollection
+		Dim catnav As NotesViewNavigator
+		Dim naventry As NotesViewEntry
+		Dim ListValues() As String
+		Dim ListHeads() As String
+		Dim ListAuthors() As String
+		Dim ListReaders() As String
+		
+		Dim tempdoc As NotesDocument
+		Dim accessitem As NotesItem 
+		
+		'Aufbau Liste Dezernate
+		Set lookupview=me.db.Getview(Lookup_ORGA_PG_VE$)
+		Set catnav=lookupview.Createviewnav()
+		Set naventry=catnav.Getfirst()
+		i%=1
+		Do Until naventry Is Nothing
+			If naventry.Iscategory Then
+				ReDim Preserve ListValues(i%)	
+				ListValues(i%)=naventry.Columnvalues(0)
+				i%=i%+1
+			End If			
+			Set naventry=catnav.Getnextcategory(naventry)
+		Loop
+		
+		'Initialisieren und aufrufen Auswahldialog
+		Set tempdoc=New NotesDocument(ThisDB)
+		tempdoc.Label_1="Dezernat wählen"
+		tempdoc.Label_2="Dezernat"
+		tempdoc.ListValues=ListValues()
+		'tempdoc.Selection=doc.Package_Department(0)
+		tempdoc.Selection=doc.Getitemvalue("Package_Department" & DepNo$)(0)
+		If Not _
+		ws.DialogBox("SF-Set-ListValue",True,True,False,False,False,False,thisdb.Title,tempdoc,False,False,True) _
+		Then
+			Exit Sub
+		End If
+		
+		'Wert setzen
+		Call doc.Replaceitemvalue("Package_Department" & DepNo$, tempdoc.Selection)
+		
+		'Zugriffsfelder bestimmen
+		Set lookupcol=lookupview.Getalldocumentsbykey(tempdoc.Selection(0))
+		Set tempdoc=lookupcol.Getfirstdocument()
+		i%=0
+		Do Until tempdoc Is Nothing
+			ReDim Preserve ListHeads(i%)	
+			ListHeads(i%)=tempdoc.PG_TeamleiterMail(0) 'Teamleiter
+			ReDim Preserve ListAuthors(i%)	
+			ListAuthors(i%)=tempdoc.PG_Authors(0) 'Autoren
+			ReDim Preserve ListReaders(i%)	
+			ListReaders(i%)=tempdoc.PG_Reader(0) 'Leser
+			i%=i%+1
+			Set tempdoc=lookupcol.Getnextdocument(tempdoc)			
+		Loop	
+		
+		'Zugriffsfelder setzen
+		If i%>0 Then
+			Call doc.ReplaceItemValue("PG_Head" & DepNo$,ListHeads())
+			Set accessitem=doc.Getfirstitem("PG_Head" & DepNo$)
+			accessitem.Isauthors=True
+			Call doc.ReplaceItemValue("PG_Author" & DepNo$,ListAuthors())
+			Set accessitem=doc.Getfirstitem("PG_Author" & DepNo$)
+			accessitem.Isauthors=True
+			Call doc.ReplaceItemValue("PG_Reader" & DepNo$,ListAuthors())
+			Set accessitem=doc.Getfirstitem("PG_Reader" & DepNo$)
+			accessitem.Isauthors=True
+		End If
+		
+		'Bildschirm aktualisieren
+		Call ws.CurrentDocument.Refresh
+		
+	End Sub
+	
+	Sub RemovePG(doc)
+		Dim ws As New NotesUIWorkspace
+		
+		Call doc.ReplaceItemValue("PG_Name","")
+		Call doc.ReplaceItemValue("PG_ShortName","")
+		
+		If doc.PG_Reader(0)<>"" Then
+			Call doc.ReplaceItemValue("PG_Reader","*")
+		Else
+			Call doc.ReplaceItemValue("PG_Reader","*")
+		End If
+		
+		Call doc.ReplaceItemValue("PG_Author","")
+		Call doc.ReplaceItemValue("PG_Head","")
+		
+		If doc.DocType(0)="F-Package" Then
+			Call doc.ReplaceItemValue("Package_Department","")
+		End If
+		
+		'Bildschirm aktualisieren
+		Call ws.CurrentDocument.Refresh		
+	End Sub
+	
+	Sub GetTeam(doc As NotesDocument)
+		
+		Dim ws As New NotesUIWorkspace
+		Dim lookupview As NotesView
+		Dim lookupcol As NotesDocumentCollection
+		
+		Dim tempdoc As NotesDocument
+		Dim pdoc As NotesDocument
+		Dim ListValues() As String
+		
+		Set lookupview=me.db.Getview(Lookup_ORGA_PG_VE$)
+		Set lookupcol=lookupview.Getalldocumentsbykey(doc.Package_Department(0))
+		If lookupcol.Count=0 Then
+			MsgBox "Kein Team für dieses Dezernat im AB-Verteiler eingetragen!", 64, me.db.Title
+			Exit Sub
+		End If
+
+		Set pdoc=lookupcol.Getfirstdocument()
+		i%=0
+		Do Until pdoc Is Nothing
+			ReDim Preserve ListValues(i%)	
+			ListValues(i%)=pdoc.PG_Name(0) 'Teamleiter
+			i%=i%+1
+			Set pdoc=lookupcol.Getnextdocument(pdoc)	
+		Loop
+		
+		Set tempdoc=New NotesDocument(ThisDB)
+		tempdoc.Label_1="Team wählen"
+		tempdoc.Label_2="Team"
+		tempdoc.ListValues=ListValues()
+		tempdoc.Selection=doc.PG_Name(0)
+		If Not _
+		ws.DialogBox("SF-Set-ListValue",True,True,False,False,False,False,thisdb.Title,tempdoc,False,False,True) _
+		Then
+			Exit Sub
+		End If
+		
+		'Team setzen
+		Call doc.Replaceitemvalue("PG_Name", tempdoc.Selection)
+		
+		If doc.Package_StatusCode(0)="01" Then
+			doc.Package_StatusCode="02"
+			doc.Package_Status="Zugewiesen"
+		End If	
+		
+		'Teamleiter Mail setzen
+		Set lookupview=me.db.Getview(Lookup_ORGA_PG_Flat$)
+		Set pdoc=lookupview.Getdocumentbykey(tempdoc.Selection(0), True)
+		If Not pdoc Is Nothing Then
+			Call doc.Replaceitemvalue("PG_Head_Mail", pdoc.PG_TeamleiterMail(0))
+		End If
+		
+		'Bildschirm aktualisieren
+		Call ws.CurrentDocument.Refresh	
+				
+	End Sub
+	
+End Class
+
+
+
+
+Class DB_TAB As DB_Base
+	'Anbindung/Funktionen Hessen Mobil TAB
+
+	Sub New(doc As NotesDocument,dbshortcut$)
+		'cf. DB_Base 
+	End Sub
+	
+	Sub GetUser(doc,FullUserName$,FName$)
+		'Benutzerdaten aus TAB auslesen
+		Dim userview As NotesView
+		Dim userdoc As NotesDocument
+		Dim username As NotesName
+		
+		Set userview=db.Getview(Lookup_FULLNAME$) 'siehe Declaration
+		Set userdoc=userview.Getdocumentbykey(FullUserName$,True)
+				
+		If Not userdoc Is Nothing Then
+			Set username = New NotesName(userdoc.FullName(0))
+			
+			Select Case FName$
+			
+			Case "Call_By" 'alte Feldbezeichnungen ZAB
+				Call doc.ReplaceItemValue("CallAuthor",userdoc.FullName(0))
+				Call doc.ReplaceItemValue(FName$,username.Common)
+				Call doc.ReplaceItemValue("Call_Department",userdoc.CompanyName(0))
+				If userdoc.Location(0)="" Then
+					Call doc.ReplaceItemValue("Call_Location",userdoc.CompanyName(0))
+				Else
+					Call doc.ReplaceItemValue("Call_Location",userdoc.Location(0))
+				End If				
+				Call doc.ReplaceItemValue("Call_UserPhone",userdoc.FormatedOfficePhoneNumber(0))
+				Call doc.ReplaceItemValue("Call_UserMobilPhone",userdoc.CellPhoneNumber(0))
+				Call doc.ReplaceItemValue("Call_ByKbz",userdoc.Kurzbezeichnung(0))
+				Call doc.ReplaceItemValue("Call_UserRoom",userdoc.PZimmer(0))
+				Call doc.ReplaceItemValue("Call_CostCenter",userdoc.Kostenstelle(0))
+				'Call doc.ReplaceItemValue("Call_ByMailAddress",userdoc.FullName(0))				
+				Call doc.ReplaceItemValue("Call_ByMailAddress",userdoc.MailAddress(0))
+					
+			Case "Call_ByVertretung" 'alte Feldbezeichnungen ZAB
+				Call doc.ReplaceItemValue(FName$,username.Common)
+				Call doc.ReplaceItemValue("Call_UserPhoneV",userdoc.FormatedOfficePhoneNumber(0))
+				Call doc.ReplaceItemValue("Call_UserMobilPhoneV",userdoc.CellPhoneNumber(0))
+				Call doc.ReplaceItemValue("Call_ByMailAddressV",userdoc.FullName(0))
+				'Call doc.ReplaceItemValue("Call_ByMailAddressV",userdoc.MailAddress(0))
+										
+			Case Else 'Standard Auftragsbuch
+				Call doc.ReplaceItemValue(FName$,userdoc.FullName(0))
+				Call doc.ReplaceItemValue(FName$ & "_Department",userdoc.CompanyName(0))
+				Call doc.ReplaceItemValue(FName$ & "_Location",userdoc.Location(0))
+				Call doc.ReplaceItemValue(FName$ & "_UserPhone",userdoc.FormatedOfficePhoneNumber(0))
+				Call doc.ReplaceItemValue(FName$ & "_UserMobilPhone",userdoc.CellPhoneNumber(0))
+				Call doc.ReplaceItemValue(FName$ & "_KBZ",userdoc.Kurzbezeichnung(0))
+				Call doc.ReplaceItemValue(FName$ & "_Kostenstelle",userdoc.Kostenstelle(0))
+				Call doc.ReplaceItemValue(FName$ & "_Mail",userdoc.MailAddress(0))
+			
+			End Select
+			
+			
+			
+			
+		End If		
+	End Sub
+	
+	Function GetUserMailAddress(FullUserName$) As String
+		'Benutzerdaten aus TAB auslesen
+		Dim userview As NotesView
+		Dim userdoc As NotesDocument
+		
+		GetUserMailAddress=""
+		
+		Set userview=db.Getview(Lookup_FULLNAME$) 'siehe Declaration
+		Set userdoc=userview.Getdocumentbykey(FullUserName$,True)
+		
+		If Not userdoc Is Nothing Then
+			GetUserMailAddress=userdoc.MailAddress(0)
+		End If
+		
+	End Function
+
+	Sub RemoveUser(doc,FName$)
+		'Benutzerdaten aus Dokument entfernen
+		Dim ws As New NotesUIWorkspace
+		
+		Call doc.ReplaceItemValue(FName$,"")
+		Call doc.ReplaceItemValue(FName$ & "_Department","")
+		Call doc.ReplaceItemValue(FName$ & "_Location","")
+		Call doc.ReplaceItemValue(FName$ & "_UserPhone","")
+		Call doc.ReplaceItemValue(FName$ & "_UserMobilPhone","")
+		Call doc.ReplaceItemValue(FName$ & "_KBZ","")
+		Call doc.ReplaceItemValue(FName$ & "_Kostenstelle","")
+		Call doc.ReplaceItemValue(FName$ & "_Mail","")
+		
+		Call ws.Currentdocument.Refresh() 'Anzeige aktualisieren			
+	End Sub
+	
+End Class
+
+
+
+Public Class DOC_Base
+	'Basisklasse für Dokumente	
+	classdoc As NotesDocument
+	
+	Sub New(currentdoc As NotesDocument)
+		Set classdoc=currentdoc
+	End Sub
+	
+	Sub EditFieldHistory(fname$,newvalue$)
+		'Protokollfeld aktualsieren
+		Dim newhistory(0) As String
+		Dim history
+		
+		newhistory(0)=newvalue$
+		
+		'History-Item ersetzen
+		If classdoc.GetItemValue(fname$)(0)<>"" Then
+			history=ArrayAppend(newhistory,classdoc.GetItemValue(fname$))
+			Call classdoc.ReplaceItemValue(fname$,history)
+		Else
+			Call classdoc.ReplaceItemValue(fname$,newhistory)
+		End If
+		
+	End Sub
+
+	Sub InitFieldHistory(fname$,historyname$)
+		
+		If classdoc.Hasitem(fname$) Then			
+			historyvalue$= _
+			Format$(classdoc.Lastmodified,"DD.MM.YYYY hh:mm") & ": zugewiesen von " & session.CommonUserName
+			Call classdoc.Replaceitemvalue(historyname$, historyvalue$)			
+		End If	
+		
+	End Sub
+
+	Sub DocPostSave(FlagSave As Boolean)
+		'Setzt ORG-DOC-ID, schreibt Historie, Dateiliste
+		Dim bodyitem As NotesRichTextItem
+		Dim filelist() As String		
+		Dim newhistory(0) As String
+		Dim history
+		
+		Call classdoc.Removeitem("CloseWindow") 'Entfernt Steuerfeld
+		
+		If Not classdoc.HasItem("DOC_ORG_ID") Then
+			classdoc.DOC_ORG_ID=classdoc.UniversalID 'Setze Referenz-UNID		
+		End If
+		
+		'Bearbeitungshistorie fortschreiben		
+		newhistory(0)=CStr(Now()) & " - " & session.CommonUserName
+		
+		If classdoc.HasItem("DOC_HISTORY") Then
+			history=ArrayAppend(newhistory,classdoc.DOC_HISTORY)
+			Call classdoc.ReplaceItemValue("DOC_HISTORY",history)
+		Else
+			classdoc.DOC_HISTORY=newhistory
+		End If
+		
+		'Schreibe DOC_FileList
+		If classdoc.Hasitem("Body") Then
+			Set bodyitem=classdoc.GetFirstItem("Body")
+			
+			If IsEmpty(bodyitem.Embeddedobjects) Then
+				Call classdoc.Removeitem("DOC_FileList")
+			Else
+				'Anhangsliste erstellen
+				i%=0
+				ForAll files In bodyitem.Embeddedobjects
+					
+					If files.Type=EMBED_ATTACHMENT Then
+						ReDim Preserve filelist(i%)
+						filelist(i%)=files.name
+						i%=i%+1
+					End If		
+					
+				End ForAll
+				classdoc.DOC_FileList=filelist 'Liste eintragen
+			End If
+		End If
+		
+		If FlagSave Then
+			Call classdoc.Save(False, False)
+		End If
+		
+	End Sub
+	
+	Sub GetDepartment(DepNo$)
+		Set orgadb=New DB_ORGA(DBProfile,"GroupDB")
+		Call orgadb.GetDepartment(classdoc,DepNo$)		
+	End Sub
+
+	Sub GetPG()
+		Set orgadb=New DB_ORGA(DBProfile,"GroupDB")
+		Call orgadb.GetPG(classdoc)		
+	End Sub
+
+	Sub GetProject()
+		Set ipbdb=New DB_IPB(DBProfile,"IPBDB")
+		Call ipbdb.GetProject(classdoc)
+	End Sub
+
+	Sub GetTeam()
+		Set orgadb=New DB_ORGA(DBProfile,"GroupDB")
+		Call orgadb.GetTeam(classdoc)		
+	End Sub
+	
+	Sub InitCounter()
+		'Profildokument: Inialisierung Zähler
+		Dim ws As New NotesUIWorkspace		
+		Dim counterview As NotesView
+		Dim counterdoc As NotesDocument
+		Dim AuthorItem As NotesItem
+		
+		Set counterview=thisdb.GetView("V-Lookup-Counter")
+		
+		For i=0 To 10 
+			ActYear%=Year(Today())+i
+			'ActYear%=i
+			Set counterdoc=counterview.GetDocumentByKey(CStr(ActYear%))
+			
+			If counterdoc Is Nothing Then
+				Set counterdoc=New NotesDocument(thisdb)
+				counterdoc.Form="F-Counter"
+				counterdoc.DocType="F-Counter"
+				counterdoc.CounterYear=ActYear%	
+				counterdoc.CounterReading=0
+				counterdoc.CounterDraft=0
+				Set AuthorItem = New NotesItem( counterdoc, "DocAuthor", "*"  , AUTHORS  )
+				Call counterdoc.Save(True,False)
+			End If
+		Next
+		
+		Call ws.CurrentDocument.Refresh	
+		
+	End Sub
+	
+	Sub RemoveDoc(ShowReason As Boolean)
+		
+		Dim ws As New NotesUIWorkspace
+		Dim lookupview As NotesView
+		Dim doccollection As NotesDocumentCollection
+		
+		If ShowReason Then
+			reason=ws.Prompt(PROMPT_OKCANCELEDIT, thisdb.Title, "Grund des 'Löschung':")
+			If IsEmpty(reason) Then
+				MsgBox "Bitte geben Sie einen Grund für die Löschung an", 64, thisdb.Title
+				Exit Sub
+			End If
+			classdoc.DEL_Reason=reason
+		End If
+		
+		classdoc.DEL_BY=session.UserName
+		classdoc.DEL_AT=Now()
+		
+		'Auftragserweiterungen kennzeichnen
+		If classdoc.Save(False,False) Then
+			
+			'Eintrag schließen
+			classdoc.SaveOptions="0"
+			Call ws.Currentdocument.Refresh()
+			Call ws.Currentdocument.Close(True)
+			Call ws.Viewrefresh()
+			MsgBox "Der Eintrag wurde entfernt!", 64, thisdb.Title
+		End If
+		
+	End Sub
+	
+	Sub RemoveUser(FName$)
+		Set tbook=New DB_TAB(DBProfile,"TABDB")
+		Call tbook.RemoveUser(classdoc,FName$)
+	End Sub
+	
+	Sub SelectUser(FName$)
+		'Auswahl Auftraggeber, Vertreter
+		Dim ws As New NotesUIWorkspace
+		Dim picklistcollection As NotesDocumentCollection
+		Dim selecteddoc As NotesDocument
+		
+		Set tbook=New DB_TAB(DBProfile,"TABDB")
+		
+		'Auswahlansicht siehe Deklaration
+		Set picklistcollection= _ 
+		ws.PickListCollection(3,False,tbook.db_server,tbook.db_filepath,Lookup_TAB$,thisdb.Title,"Auswahl Auftraggeber:") 
+		
+		If picklistcollection.Count=0 Then 	Exit Sub 'Abbruch falls keine Auswahl getroffen
+		Set selecteddoc=picklistcollection.GetFirstDocument
+		
+		Call tbook.GetUser(classdoc, selecteddoc.FullName(0), FName$)
+		Call ws.CurrentDocument.Refresh
+		
+	End Sub
+
+	Sub SelectDB(fieldserver$,fieldpath$,fieldtitle$)
+		'Datenbankauswahl
+		Dim ws As New NotesUIWorkspace
+		Dim selecteddb As NotesDatabase
+		Dim getdb As Variant
+		
+		getdb =  ws.prompt(13,"","")
+		If Not IsArray(getDb) Then  'Abbruch gewählt
+			Exit Sub	
+		End If
+		
+		Set selecteddb=New NotesDatabase(getdb(0), getdb(1))		
+		Call classdoc.Replaceitemvalue(fieldserver$,getdb(0))
+		Call classdoc.Replaceitemvalue(fieldpath$,getdb(1))
+		Call classdoc.Replaceitemvalue(fieldtitle$,selecteddb.Title)
+		
+		Call ws.CurrentDocument.Refresh
+		
+	End Sub
+
+	Sub SelectKey(FromView$,SourceField$,TargetField$)
+		'Auswahl Schlüsselwort
+		Dim ws As New NotesUIWorkspace
+		Dim selection As NotesDocumentCollection
+		Dim selecteddoc As NotesDocument
+		
+		'Auswahl aus Auswahlansicht
+		Set selection= _ 
+		ws.PickListCollection(3,False,ThisDB.Server,ThisDB.Filepath,FromView$,ThisDB.Title,"Auswahl:")
+		'Abbruch falls keine Auswahl getroffen
+		If selection.Count=0 Then 	Exit Sub
+		
+		'Werte setzen
+		Set selecteddoc=selection.Getfirstdocument()
+		Call classdoc.Replaceitemvalue(TargetField$, selecteddoc.Getitemvalue(SourceField$))
+		
+		'Bildschirm aktualisieren
+		Call ws.CurrentDocument.Refresh
+		
+	End Sub
+		
+	Sub SelectToDo()
+		'Auswahl Definition Teilleistung
+		Dim ws As New NotesUIWorkspace()		
+		Dim selection As NotesDocumentCollection
+		Dim selecteddoc As NotesDocument
+		
+		Set selection=ws.Picklistcollection(3, False, ThisDB.Server,ThisDB.Filepath,Lookup_ToDo$, ThisDB.Title, "Bitte wählen",classdoc.CALL_ORG_ID(0))				
+		If selection.Count=0 Then Exit Sub
+		
+		Set selecteddoc=selection.Getfirstdocument()
+		classdoc.Package_ShortCut=selecteddoc.PACKAGE_ShortCut 'KBZ Arbeitspaket
+		classdoc.Package_Name=selecteddoc.PACKAGE_Name 'Bezeichnung Arbeitspaket
+		classdoc.ToDo_Name=selecteddoc.ToDo_Name 'Bezeichnung Arbeitspaket		
+		classdoc.TODO_ORG_ID=selecteddoc.DOC_ORG_ID 'Bezeichnung		
+		Call ws.Currentdocument.Refresh() 'Anzeige aktualisieren
+		
+	End Sub
+
+
+	Sub SelectPackage(IncludeAccess As Boolean)
+		'Auswahl Arbeitspaket
+				
+		Dim ws As New NotesUIWorkspace()		
+		Dim selection As NotesDocumentCollection
+		Dim selecteddoc As NotesDocument
+		Dim accessitem As NotesItem
+		
+		If classdoc.CALL_ORG_ID(0)="" Then
+			'Auswahl aus Definition Arbeitspakete
+			Set selection=ws.Picklistcollection(3, False, ThisDB.Server,ThisDB.Filepath,Lookup_PackageDefinition$, ThisDB.Title, "Bitte wählen")
+		Else
+			'Auswahl aus zugeordneten Arbeitspaketen
+			Set selection=ws.Picklistcollection(3, False, ThisDB.Server,ThisDB.Filepath,Lookup_CallPackage$, ThisDB.Title, "Bitte wählen",classdoc.CALL_ORG_ID(0))				
+		End If
+		If selection.Count=0 Then Exit Sub 'Abbruch, falls keine Auswahl
+		
+		Set selecteddoc=selection.Getfirstdocument()
+		classdoc.Package_ShortCut=selecteddoc.PACKAGE_ShortCut 'KBZ
+		classdoc.Package_Name=selecteddoc.PACKAGE_Name 'Bezeichnung
+		classdoc.Package_ORG_ID=selecteddoc.DOC_ORG_ID 'Bezeichnung	
+		
+		If IncludeAccess Then
+			'Übernahem Zugriff
+			classdoc.PG_Name=selecteddoc.PG_Name
+			Set accessitem=New NotesItem(classdoc,"PG_Author",selecteddoc.PG_Author,AUTHORS)
+			Set accessitem=New NotesItem(classdoc,"PG_Head",selecteddoc.PG_Head,AUTHORS)
+			Set accessitem=New NotesItem(classdoc,"PG_Reader",selecteddoc.PG_Reader,READERS)
+		End If
+		
+		Call ws.Currentdocument.Refresh() 'Anzeige aktualisieren
+		
+	End Sub
+
+	Sub SetCounter(CounterName$,CounterField$)
+		'Setzten des  Zählerwertes 
+		Dim ws As New NotesUIWorkspace
+		
+		newcounter$= _
+		InputBox$("Neuer Zählerstand (" & CounterName$ & " )", thisdb.Title,classdoc.Getitemvalue(CounterField$)(0))
+		
+		If Not IsNumeric(newcounter$) Then
+			MessageBox "FEHLER: Eingabe ist keine Zahl", 64, thisdb.Title
+			Exit Sub
+		End If
+		
+		If CInt(newcounter$)<0 Then
+			MessageBox "FEHLER: Eingabe ist kleiner Null", 64, thisdb.Title
+			Exit Sub
+		End If
+		
+		Call classdoc.Replaceitemvalue(CounterField$,CInt(newcounter$))		
+		Call ws.CurrentDocument.Refresh
+	End Sub
+	
+End Class
+'++LotusScript Development Environment:2:2:Initialize:1:10
+Sub Initialize
+	
+	Set ws=New NotesUIWorkspace
+	Set Session=New NotesSession
+	Set ThisDB=Session.CurrentDatabase
+	Set DBProfile=ThisDB.Getprofiledocument("P-DB")
+	
+End Sub
+
+
+
+'++LotusScript Development Environment:2:2:Call_SendLink:1:8
+Sub Call_SendLink()
+
+	Dim ws As New NotesUIWorkspace
+	Dim memodoc As NotesDocument
+	
+	Dim MimeBody As NotesMIMEEntity
+	Dim HTMLmail As NotesMIMEEntity
+	Dim Header As NotesMIMEHeader
+	Dim Stream As NotesStream
+	
+	Dim accessitem As NotesItem
+	Dim accesslist(1) As String
+	
+	On Error GoTo errorhandler
+	
+	accesslist(0)="[Admin]"
+	accesslist(1)="[Support]"
+
+	Set modaldoc=New NotesDocument(thisdb)
+	modaldoc.Subject= thisdb.Title & _
+	": Auftrag " & thisdoc.Call_Number(0)
+	
+	modaldoc.EditBody="Details zu diesem Auftrag finden Sie unter folgender Verknüpfung:"	
+	If _ 
+	ws.DialogBox("EditSendLink",True,True,False,False,False,False,thisdb.Title,modaldoc,False,False,False) _ 
+	Then
+		If modaldoc.EditSendTo(0)="" Then
+			MessageBox "FEHLER: Kein Empfänger gewählt!", 64, thisdb.Title
+			Exit Sub
+		End If
+
+		'Memo erstellen
+		Set memodoc=New NotesDocument(thisdb)
+		memodoc.Form="F-Memo"
+		memodoc.DocType="F-Memo"
+		memodoc.DOCISDRAFT="0"
+		memodoc.DocuType="1"
+		memodoc.Flag_SendDocu="Backend"
+		memodoc.Call_Number=ThisDoc.Call_Number(0)
+		memodoc.CALL_ORG_ID=ThisDoc.CALL_ORG_ID(0)
+		memodoc.CALL_UNID=ThisDoc.Universalid
+		
+		'Zugriff
+		Set accessitem=New NotesItem(memodoc,"DOC_CreatedBy",session.UserName,AUTHORS)
+		Set accessitem=New NotesItem(memodoc,"DOC_AUTHOR",accesslist(),AUTHORS)
+
+		'Betreff
+		memodoc.Subject=modaldoc.Subject	
+			
+				
+		'Empfänger
+		memodoc.EditSendTo=modaldoc.EditSendTo
+		memodoc.RECIPIENTS=memodoc.EditSendTo
+		
+		'Kopieempfänger (Projektcontrolling)
+		If dbprofile.Getitemvalue("ControllingMailAddress")(0)<>"" Then
+			memodoc.EditCopyTo=dbprofile.ControllingMailAddress
+			memodoc.RECIPIENTS=ArrayAppend(memodoc.RECIPIENTS,memodoc.EditCopyTo)
+		End If
+		
+		'Blindkopie (Kontrolladresse)
+		If dbprofile.Getitemvalue("ControllCopyTo")(0)<>"" Then
+			memodoc.EditBlindCopyTo=dbprofile.ControllCopyTo
+			memodoc.RECIPIENTS=ArrayAppend(memodoc.RECIPIENTS,memodoc.EditBlindCopyTo)
+		End If	
+		
+		'Absender
+		Set tbook=New DB_TAB(DBProfile,"TABDB")
+		TEMP_Principal$=tbook.GetUserMailAddress(session.Username)
+		If TEMP_Principal$="" Then
+			memodoc.MAIL_PRINCIPAL=dbprofile.DefaultSendFrom(0)
+			Else
+			memodoc.MAIL_PRINCIPAL=TEMP_Principal$
+		End If	
+				
+		'Text erstellen	
+		srvhost$=GetSrvHost()
+		notesurl$="notes://" & srvhost$ & "/" & thisdb.Replicaid & "/0/" & thisdoc.Universalid & "?OpenDocument"
+		linkurl$="<p><a href='" & notesurl$ &"'>" & thisdoc.Call_Number(0) & "</a>"
+
+		BodyText$=modaldoc.EditBody(0) & "<br><br>" & linkurl$
+		
+		'Mail-Body im MIME-Format
+		Set Stream = Session.CreateStream
+		Session.ConvertMIME = False ' Aufheben der RichText Konvertierung
+		
+		Set MimeBody = memodoc.CreateMIMEEntity
+		
+		'Mail-Header-erstellen: Content-Type, charset
+		Set Header = MimeBody.CreateHeader("Content-Type") 'Header: Content-Type
+		Call Header.SetHeaderVal("multipart/alternative") '(Alternativ: ctype$="multipart/mixed" oder ctype$="text/html")
+		Set Header = Mimebody.CreateHeader("charset") 'Header: charset
+		Call Header.SetHeaderVal("ISO-8859-1")
+		
+		'BEGINN Nachricht als HTML			
+		Set HTMLmail = mimebody.CreateChildEntity
+		Call Stream.WriteText( _ 
+		DOCTYPE$ & HEAD1$ & HEAD2$ & HEAD3$ & HEAD4$ & HEAD5$ & HEAD6$ & HEAD7$ & "<body>") 'HTML-Head
+		
+		'Text übernehmen
+		Call Stream.WriteText(BodyText$)
+		
+		Call Stream.WriteText("</body></html>") 'Taggs schliessen
+		
+		Call HTMLmail.SetContentFromText _ 
+		(Stream, "text/html;charset=ISO-8859-1", ENC_IDENTITY_BINARY)
+		Call Stream.Truncate		 				
+		
+		If memodoc.Save(True,True) Then
+			MessageBox "Eine Verknüpfung wird versendet!", 64, thisdb.Title
+		End If
+		
+	End If
+	
+	Exit Sub
+	
+errorhandler:
+	MessageBox "Call_SendLink - Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Print "Line " & Str(Erl) & " - Error" & Str(Err) & ": " & Error$
+	Resume errorexit
+
+errorexit:
+	Exit Sub
+	
+End Sub
+
+
+'++LotusScript Development Environment:2:1:Call_QuerySave:1:8
+Function Call_QuerySave(uidoc As NotesUIDocument)
+	
+	'Initialisiere Steuervariablen
+	Call_QuerySave=True
+	ErrorText$="" 'Fehlermeldung Valedierung
+	
+	Call uidoc.FieldSetText("CloseWindow","") 'Steuerfeld
+	
+	If thisdoc.Call_Description(0)="" Then
+		ErrorText$="Kurze Beschreibung des Problems." & Chr(13)
+	Else
+		dislen%=Len(thisdoc.Call_Description(0))
+		If dislen%>500 Then
+			ErrorText$=ErrorText$ & "Beschreibung ist zu lang (" & CStr(dislen%) & " Zeichen verwendet, zulässig: 500)" & Chr(13)
+		End If		
+	End If
+	
+	If thisdoc.Call_Type(0)="" Then
+		ErrorText$=ErrorText$ & "Bereich in dem die Anfrage einzuorden ist." & Chr(13)
+	End If
+	
+	
+	If thisdoc.Call_FollowUp(0)<>"" And uidoc.FieldGetText("Call_FollowUpDate")="" Then
+		ErrorText$=ErrorText$ & "Wiedervorlagedatum" & Chr(13)
+	End If
+	
+	If ErrorText$<>"" Then
+		MessageBox "Bitte ergänzen/korrigieren Sie folgende Angaben:" & Chr(13) & ErrorText$, 64,thisdb.Title
+		Call uidoc.GotoField("Call_Description")
+		Call uidoc.FieldSetText("CloseWindow","N")
+		Call_QuerySave=False
+		Exit Function	
+	End If
+	
+End Function
+
+'++LotusScript Development Environment:2:1:DOC_QueryMode:1:8
+Function DOC_QueryMode(uidoc As NotesUIDocument) As Boolean 'AB ID
+	'Prüft Bearbeitbarkeit des Dokuments
+	Dim role As Variant
+	Dim doc As NotesDocument
+	
+	DOC_QueryMode=True
+
+	Set doc=uidoc.Document
+	
+	'Prüfung Mail
+	If doc.DocType(0)="F-Memo" or doc.DocType(0)="F_Memo" Then
+		If doc.DocIsDraft(0)="0" Or doc.DocIsDraft(0)="" Then
+			MsgBox "Dieser Eintrag kann nicht mehr bearbeitet werden!", 64, thisdb.Title
+			DOC_QueryMode=False
+			Exit Function
+		End If		
+	End If
+	
+	role=Evaluate(|@contains(@Userroles;"[Admin]":"[Support]")|)
+
+	'Prüfung Auftrag
+	If doc.DocType(0)="F_Supp_Call" Then
+		If Role(0)=1 Then 'Prüfung für Rolle Support,Admin
+			'Prüfung Abgeschlossen
+			If doc.Call_Status(0)="Abgeschlossen" Then
+				MessageBox "Abgeschlossene Aufträge können nicht mehr bearbeitet werden!", 64, thisdb.Title
+				DOC_QueryMode=False
+				Exit Function
+			End If
+			'Prüfung Stornierung
+			If doc.Call_Status(0)="Storniert" Then
+				MessageBox "Stornierte Aufträge können nicht mehr bearbeitet werden!", 64, thisdb.Title
+				DOC_QueryMode=False
+				Exit Function
+			End If
+		Else
+			'Keine Bearbeitung eingereichter Aufträge ohne Rollen Support, Admin	
+			If doc.Call_Status(0)<>"Neu" Then
+				MessageBox "Dieser Auftrag kann von Ihnen nicht mehr bearbeitet werden!", 64, thisdb.Title
+				DOC_QueryMode=False
+				Exit Function
+			End If				
+		End If		
+	End If	
+		
+End Function
+
+
+'++LotusScript Development Environment:2:1:GetSrvHost:1:8
+Function GetSrvHost() As String
+	
+	Dim dirdb As NotesDatabase
+	Dim serverview As NotesView
+	Dim serverdoc As NotesDocument
+		
+	GetSrvHost=""
+	
+	'Zugriff Names für Adressprüfung/ Serversuche
+	Set dirdb=session.GetDatabase(thisdb.Server,"names.nsf",False)	
+	Set serverview=dirdb.GetView("($Servers)")
+	Set serverdoc=serverview.Getdocumentbykey(thisdb.Server, True)
+	If serverdoc Is Nothing Then		
+		Exit Function
+	End If
+	
+	GetSrvHost=serverdoc.SMTPFullHostDomain(0)
+	
+End Function
+
+
+'++LotusScript Development Environment:2:1:QuickSort:1:8
+Public Function QuickSort(sArray As Variant)
+	
+	Dim sA() As String    
+	Dim j As Long
+	Dim bottom As Long
+	Dim top As Long
+	bottom = Lbound ( sArray )
+	top = Ubound ( sArray )
+	
+	Redim sA( bottom To top ) As String     
+	For j = bottom To top
+		sA ( j ) = sArray ( j )
+	Next
+     ' DoQS does a QuickSort if the Sublist is longer than 10 elements
+     ' Thus, when DoQS finishes, all elements are within 10 spots of their correct location.
+     ' For lists that are close to being in order, an Insertion Sort is much faster than a QuickSort, so we
+     ' run through the whole thing once doing an Insertion Sort to finish tidying up the order.
+	
+	Call QuickSort_Do( sA, bottom, top )
+	Call QuickSort_DoInsertSort ( sA, bottom, top )
+	
+	SortedArray = sA
+	
+End Function
+
+'++LotusScript Development Environment:2:2:GenerateRepeatList:1:8
+Sub GenerateRepeatList
+	Dim workspace As New NotesUIWorkspace
+	Dim uidoc As NotesUIDocument
+	Dim repeatdoc As NotesDocument
+	Dim datelistmember As Notesdatetime
+	Dim firstdate As NotesDateTime
+	
+	Dim repeatlist() As Variant
+	
+	Set uidoc=workspace.CurrentDocument
+	Set repeatdoc=uidoc.Document
+	
+	If uidoc.FieldGetText("FirstDate")="" Then
+		Messagebox "FEHLER: Anfangsdatum fehlt!", 64, repeatdoc.ParentDatabase.Title
+		Exit Sub
+	End If
+	
+	If Not Isnumeric(uidoc.FieldGetText("SelectRepeat")) Then
+		Messagebox "FEHLER: Anzahl der Wiederholungen ist keine positve Zahl!", 64, repeatdoc.ParentDatabase.Title
+		Exit Sub
+	End If
+	
+	If repeatdoc.SelectRepeat(0)<1 Then
+		Messagebox "FEHLER: Anzahl der Wiederholungen nicht positiv!", 64, repeatdoc.ParentDatabase.Title
+		Exit Sub
+	End If
+	
+	Set firstdate=New NotesDateTime(Cstr(repeatdoc.FirstDate(0))) 'frühster Wiedervorlagetermin
+	
+	Select Case repeatdoc.RepeatType(0)
+		
+	Case "0" 'wöchentliche Wiederholung
+		Set datelistmember=New NotesDateTime(Cstr(Today()))
+		
+		'Vorschub auf gewählten Wochentag
+		If Weekday(datelistmember.DateOnly)=Cint(repeatdoc.SelectWeekday(0)) Then
+			Call datelistmember.AdjustDay(7)
+		Else
+			Do While Weekday(datelistmember.DateOnly)<>Cint(repeatdoc.SelectWeekday(0))
+				Call datelistmember.AdjustDay(1)	
+			Loop
+		End If
+		
+		'Vorschub bis Anfangsdatum erreicht
+		Do While datelistmember.TimeDifference(firstdate)<0
+			Call datelistmember.AdjustDay(7)
+		Loop
+		
+		'Belegung der Wiedervorlageliste
+		Redim repeatlist(repeatdoc.SelectRepeat(0)-1)
+		repeatlist(0)=Datevalue(datelistmember.DateOnly)
+		For i=1 To repeatdoc.SelectRepeat(0)-1
+			Call datelistmember.AdjustDay(7)
+			repeatlist(i)=Datevalue(datelistmember.DateOnly)
+		Next
+		
+		repeatdoc.RepeatList=repeatlist
+		
+		
+	Case "1" 'monatliche Wiedervorlage
+		Set datelistmember=New NotesDateTime(repeatdoc.SelectDate(0) & "." & Cstr(Month(Today())) & "." & Cstr(Year(Today())))
+		startdate$=datelistmember.DateOnly
+		
+		k%=0
+		'Vorschub bis Anfangsdatum erreicht
+		Do While datelistmember.TimeDifference(firstdate)<0
+			Set datelistmember=New NotesDateTime(startdate$)
+			k%=k%+1
+			Call datelistmember.AdjustMonth(k%)
+		Loop
+		
+		'Belegung der Wiedervorlageliste
+		Redim repeatlist(repeatdoc.SelectRepeat(0)-1)
+		repeatlist(0)=Datevalue(datelistmember.DateOnly)
+		For i=1 To repeatdoc.SelectRepeat(0)-1
+			Call datelistmember.AdjustMonth(i)
+			repeatlist(i)=Datevalue(datelistmember.DateOnly)
+			Set datelistmember=New NotesDateTime(repeatlist(0))			
+		Next
+		
+		repeatdoc.RepeatList=repeatlist
+		
+	Case "2"
+		If repeatdoc.CustomRepeatList(0)<>"" Then
+			NoDateValue$=""
+			k%=0
+			
+			'Umwandlung Eintragsliste in Datumsarray
+			Forall dat In repeatdoc.CustomRepeatList
+				If Isdate(dat) Then
+					Redim Preserve repeatlist(k%)
+					repeatlist(k%)=Cdat(dat)
+					k%=k%+1
+				Else
+					NoDateValue$=NoDateValue$ & dat & "  "
+				End If
+			End Forall
+			
+			repeatdoc.RepeatList=repeatlist
+			
+			If NoDateValue$<>"" Then
+				Messagebox "Folgende Einträge entsprechen keinem Datumswert:" & Chr(13) & _
+				NoDateValue$, 64, repeatdoc.ParentDatabase.Title
+			End If
+			
+			
+			repeatdoc.CustomRepeatList=repeatlist
+		Else
+			Redim repeatlist(0)
+			repeatlist(0)=""
+		End If
+		repeatdoc.RepeatList=repeatlist		
+		
+	Case Else
+		Messagebox "FEHLER: Fall nicht definiert"
+		
+	End Select
+	
+	Call uidoc.Refresh
+	
+End Sub
+
+'++LotusScript Development Environment:2:2:Call_SetEditor:1:8
+Sub Call_SetEditor()
+	
+	Set ws=New NotesUIWorkspace
+	Set ThisUIdoc=ws.CurrentDocument
+
+	If ws.Dialogbox("CallEditor",True,True) Then
+		
+		Call ThisUIdoc.FieldSetText("Call_Status","Zugeordnet")
+		Call ThisUIdoc.Refresh
+		
+	End If
+	
+End Sub
+
+
+
+
+
+
+
+
+'++LotusScript Development Environment:2:2:Call_GetTargetAddress:1:8
+Sub Call_GetTargetAddress()
+	
+	Dim lookupview As NotesView
+	Dim mailindoc As NotesDocument
+	
+	Set lookupview=thisdb.GetView("V-Lookup-Mailin")
+	
+	If thisdoc.Call_Department(0)="" Then
+		thisdoc.Call_DepartmentMailin=DBProfile.Getitemvalue("DefaultSendFrom")(0)
+		Exit Sub
+	End If
+	
+	Set mailindoc=lookupview.Getdocumentbykey(thisdoc.Call_Department(0), True)
+	
+	If mailindoc Is Nothing Then
+		thisdoc.Call_DepartmentMailin=DBProfile.Getitemvalue("DefaultSendFrom")(0)
+		Exit Sub
+	End If
+	
+	thisdoc.Call_DepartmentMailin=mailindoc.Mailin_Address(0)
+		
+End Sub
+
+'++LotusScript Development Environment:2:2:PDB_PostSave:1:8
+Sub PDB_PostSave()
+	
+	If thisdoc.MoreMailin(0)="" Then
+		thisdoc.Mailin_Title_2=""
+		thisdoc.Mailin_Title_3=""
+		thisdoc.Mailin_Server_2=""
+		thisdoc.Mailin_Server_3=""
+		thisdoc.Mailin_Path_2=""
+		thisdoc.Mailin_Path_3=""		
+	End If
+	
+	Call basedoc.DocPostSave(True)
+		
+End Sub
+
+
+'++LotusScript Development Environment:2:2:X_ChangeCallEditor1:1:8
+Sub X_ChangeCallEditor1
+	'07.08.2015 Bearbeiter Einsatzort, Nickold
+	
+	Dim CNOldEditor As NotesName
+	
+	Set ws=New NotesUIWorkspace
+	Set session=New NotesSession
+	Set ThisUIdoc=ws.CurrentDocument
+	
+	OldEditor$=ThisUIdoc.FieldGetText("Call_Editor")
+	OldFinalDate$=ThisUIdoc.FieldGetText("Call_FinalDate")
+	
+	If ws.Dialogbox("X-ChangeCallEditor1",True,True) Then
+		If OldEditor$<>ThisUIdoc.FieldGetText("Call_Editor") Then
+			Set CNOldEditor=New NotesName(OldEditor$)
+			If ThisUIdoc.FieldGetText("OldCall_Editor")="" Then
+				Call ThisUIdoc.FieldSetText("OldCall_Editor",CNOldEditor.Common & " (" & CStr(Today()) & ")") 
+			Else
+				Call ThisUIdoc.FieldSetText("OldCall_Editor",CNOldEditor.Common & " (" & CStr(Today()) & "); " & ThisUIdoc.FieldGetText("OldCall_Editor"))
+			End If			
+		End If
+		
+		If OldFinalDate$<>ThisUIdoc.FieldGetText("Call_FinalDate") Then
+			If ThisUIdoc.FieldGetText("OldCall_FinalDate")="" Then
+				Call ThisUIdoc.FieldSetText("OldCall_FinalDate",OldFinalDate$)
+			Else
+				Call ThisUIdoc.FieldSetText("OldCall_FinalDate",OldFinalDate$ & "; " & ThisUIdoc.FieldGetText("OldCall_FinalDate"))
+			End If
+		End If
+		
+		If ThisUIdoc.FieldGetText("MailToEditor")="1" Then
+			Call ThisUIdoc.FieldSetText("Flag_NotifyEditor","0")
+		End If
+		
+		Call ThisUIdoc.Refresh
+		
+	End If
+	
+End Sub
+
+'++LotusScript Development Environment:2:2:Call_SelectCallBy:2:8
+
+Sub Call_SelectCallBy()
+	'Auswahl Anforderer
+		
+	Dim picklistcollection As NotesDocumentCollection
+	Dim selecteddoc As NotesDocument
+	Dim callbyname As NotesName
+	
+	Set ws=New NotesUIWorkspace
+	Set ThisDoc=ws.Currentdocument.Document
+	Set ThisDB=ThisDoc.Parentdatabase
+	
+	'Picklist-Auswahl aus Telefonbuch	
+	lookupserver$=ThisDB.Server
+	If lookupserver$="" Then
+		MsgBox "Auswahl nicht möglich, da Anwendung lokal verwendet wird!", 64, ThisDB.Title
+	End If
+	lookupdb$="names001.nsf"
+	lookupview$="V-TEL-A06"
+	
+	Set picklistcollection= _ 
+	ws.PickListCollection(3,False,lookupserver$,lookupdb$,lookupview$,thisdb.Title,"Auswahl Auftraggeber:")
+	
+	If picklistcollection.Count=0 Then 	Exit Sub 'Abbruch falls keine Auswahl getroffen
+	
+	Set selecteddoc=picklistcollection.GetFirstDocument
+	
+	Set callbyname=New NotesName(selecteddoc.FullName(0))
+	
+	Call ThisDoc.ReplaceItemValue("CallAuthor",selecteddoc.FullName(0))
+	Call ThisDoc.ReplaceItemValue("Call_By",callbyname.Common)
+	Call ThisDoc.ReplaceItemValue("Call_Department",selecteddoc.CompanyName(0))
+	Call ThisDoc.ReplaceItemValue("Call_Location",selecteddoc.Location(0))
+	Call ThisDoc.ReplaceItemValue("Call_UserPhone",selecteddoc.FormatedOfficePhoneNumber(0))
+	Call ThisDoc.ReplaceItemValue("Call_UserRoom",selecteddoc.PZimmer(0))
+	Call ThisDoc.ReplaceItemValue("Call_ByKBZ",selecteddoc.Kurzbezeichnung(0))
+	Call ThisDoc.ReplaceItemValue("Call_CostCenter",selecteddoc.Kostenstelle(0))
+	Call ThisDoc.ReplaceItemValue("Call_ByMail",selecteddoc.MailAddress(0))
+	
+	Call ws.CurrentDocument.Refresh
+	
+End Sub
+
+'++LotusScript Development Environment:2:2:QuickSort_DoInsertSort:1:8
+Sub QuickSort_DoInsertSort ( sA() As String, Byval bottom As Long, Byval top As Long )	
+	
+	Dim i As Long
+	Dim x As Long
+	Dim v As String
+	Dim Found As Integer
+	
+	For i = bottom+1 To top
+		x = i
+		v = sA (i )
+		Do While (sA(x-1) > v)
+			sA ( x ) = sA ( x-1 )
+			x = x - 1
+			If x=0 Then
+				Exit Do
+			End If
+		Loop
+		sA (x) = v
+	Next
+	
+End Sub
+
+'++LotusScript Development Environment:2:2:Doc_Init:1:8
+Sub Doc_Init(uidoc As NotesUIDocument)
+	
+	'Initialisiere globale Variablen
+	Set thisuidoc=uidoc
+	Set thisdoc=uidoc.Document
+
+	Select Case ThisDoc.DocType(0)
+		
+	Case "F_Supp_Call"
+		Set basedoc=New DOC_BASE(ThisDoc)
+
+				
+	Case Else
+		Set basedoc=New DOC_BASE(ThisDoc)
+		
+	End Select
+	
+End Sub
+
+
+
+'++LotusScript Development Environment:2:2:Call_Close:1:8
+Sub Call_Close()
+	
+	Dim AutoAccept As Boolean
+	
+	'Initialisierung
+	Set ws=New NotesUIWorkspace
+	Set thisuidoc=ws.Currentdocument
+
+	If thisdoc.Flag_NoMail(0)="1" Then
+		rvalue%=Messagebox("Soll diese Anfrage abgeschlossen werden? " & Chr(13) & _ 
+		"Die Mailbenachrichtigung des Mitarbeiters ist deaktiviert! Die Anfrage wird" & Chr(13) & _ 
+		"ohne Benachrichtigung auf den Status 'abgenommen' gesetzt.", 36, thisdb.Title)
+		AutoAccept=True
+	Else
+		rvalue%=Messagebox("Soll diese Anfrage abgeschlossen werden? ", 36, thisdb.Title)
+		AutoAccept=False 
+	End If
+	
+	'Abbruch bei NEIN
+	If rvalue%=7 Then
+		Exit Sub
+	End If
+	
+	If AutoAccept Then
+		Call thisuidoc.FieldSetText("Call_Status","Abgeschlossen")
+		Call thisuidoc.FieldSetText("AutoAcceptance","1")
+		Call thisuidoc.FieldSetText("AcceptedAt",Cstr(Now()))
+		Call thisuidoc.FieldSetText("Call_FinishedDate",Cstr(Now()))
+		Call thisuidoc.FieldSetText("Call_FinishedBy",session.UserName)
+	Else
+		Call thisuidoc.FieldSetText("Call_Status","Abgeschlossen")
+		Call thisuidoc.FieldSetText("Call_FinishedDate",Cstr(Now()))
+		Call thisuidoc.FieldSetText("Call_FinishedBy",session.UserName)
+		Call thisuidoc.FieldSetText("Flag_NotifyReady","")
+	End If
+	
+	'Speichern des Calls
+	Call thisuidoc.Save
+	Call thisuidoc.Close
+	
+End Sub
+
+'++LotusScript Development Environment:2:2:PDB_PostOpen:1:8
+Sub PDB_PostOpen(uidoc As NotesUIDocument) 'BA4
+	'Initialisierung Profildokument / Abrufen Agentstatus für DB-Konfiguration
+	
+	Dim dbagent As NotesAgent
+	Dim agentnames As NotesName
+		
+	Set ThisDoc=uidoc.Document
+	Set basedoc=New DOC_BASE(ThisDoc)
+
+	'Abrufen des Agentstatus "Statusmeldungen"
+	Set dbagent=ThisDB.GetAgent("A-NotifyStatus")
+	If Not dbagent Is Nothing Then
+		If dbagent.IsEnabled Then
+			DspInfo$="ist aktiviert" & Chr(10) & "Gestartet von " 
+			Set agentnames=New NotesName(dbagent.Owner)
+			DspInfo$=DspInfo$ & agentnames.Common & Chr(10)
+			Set agentnames=New NotesName(dbagent.OnBehalfOf)
+			If agentnames.Canonical<>"" Then
+				DspInfo$=DspInfo$ & "Versand im Namen von " & agentnames.Canonical
+			End If						
+		Else
+			DspInfo$="Deaktiviert"			
+		End If		
+	Else
+		DspInfo$="Agent nicht vorhanden"
+	End If
+	Call ThisDoc.Replaceitemvalue("A_NotifyStatus",DspInfo$)
+	
+	'Abrufen des Agentstatus "Nachrichtenversand"
+	Set dbagent=ThisDB.GetAgent("A-ProcessMemos")
+	If Not dbagent Is Nothing Then
+		If dbagent.IsEnabled Then
+			DspInfo$="ist aktiviert" & Chr(10) & "Gestartet von " 
+			Set agentnames=New NotesName(dbagent.Owner)
+			DspInfo$=DspInfo$ & agentnames.Common & Chr(10)
+			Set agentnames=New NotesName(dbagent.OnBehalfOf)		
+			If agentnames.Canonical<>"" Then
+				DspInfo$=DspInfo$ & "Versand im Namen von " & agentnames.Canonical
+			End If			
+		Else
+			DspInfo$="Deaktiviert"
+		End If		
+	Else
+		DspInfo$="Agent nicht vorhanden"
+	End If
+	Call ThisDoc.Replaceitemvalue("A_ProcessMemos",DspInfo$)
+	
+	'Abrufen des Agentstatus "Automatische Abnahme"
+	Set dbagent=ThisDB.GetAgent("A-CheckFollowUp")
+	If Not dbagent Is Nothing Then
+		If dbagent.IsEnabled Then
+			DspInfo$="ist aktiviert" & Chr(10) & "Gestartet von " 
+			Set agentnames=New NotesName(dbagent.Owner)
+			DspInfo$=DspInfo$ & agentnames.Common & Chr(10)
+			Set agentnames=New NotesName(dbagent.OnBehalfOf)		
+			If agentnames.Canonical<>"" Then
+				DspInfo$=DspInfo$ & "Versand im Namen von " & agentnames.Canonical
+			End If			
+		Else
+			DspInfo$="Deaktiviert"
+		End If		
+	Else
+		DspInfo$="Agent nicht vorhanden"
+	End If
+	Call ThisDoc.Replaceitemvalue("A_CheckFollowUp",DspInfo$)
+	
+	Call uidoc.Refresh	
+	
+End Sub
+
+
+'++LotusScript Development Environment:2:2:PDB_InitCounter:1:8
+Sub PDB_InitCounter
+	
+	Dim counterview As NotesView
+	Dim counterdoc As NotesDocument
+	Dim AuthorItem As NotesItem
+	
+	Set ws=New NotesUIWorkspace
+	Set thisuidoc=ws.CurrentDocument
+	Set counterview=thisdb.GetView("LookupCounter")
+	
+	For i=0 To 10 
+		'ActYear%=Year(Today())+i
+		ActYear%=i
+		Set counterdoc=counterview.GetDocumentByKey(CStr(ActYear%))
+		
+		If counterdoc Is Nothing Then
+			Set counterdoc=New NotesDocument(thisdb)
+			counterdoc.Form="F-Counter"
+			counterdoc.DocType="F-Counter"
+			counterdoc.CounterYear=ActYear%	
+			counterdoc.CounterReading=0
+			Set AuthorItem = New NotesItem( counterdoc, "DocAuthor", "*"  , AUTHORS  )
+			Call counterdoc.Save(True,False)
+		End If
+	Next
+	
+	Call thisuidoc.Refresh
+	
+End Sub
+
+
+'++LotusScript Development Environment:2:2:Call_PostSave:1:8
+Sub Call_PostSave(uidoc As NotesUIDocument)
+	
+	'Bestimmen der CallNumber	
+	If thisdoc.GetCallNo(0)="" Then
+		Call Call_GetNumber(thisdoc)
+	End If
+	
+	'Korrektur Wiedervorlage
+	If thisdoc.Call_FollowUp(0)="" And Cstr(thisdoc.Call_FollowUpDate(0))<>"" Then
+		Call thisdoc.RemoveItem("Call_FollowUpDate")
+	End If
+	
+	'Prüfe Verfügbarkeit Benutzermail
+	If thisdoc.CallAuthor(0)="" Then
+		thisdoc.Flag_NoMail="1"
+	End If
+	
+	Call Call_GetTargetAddress() 'Absenderadresse für Statusmeldungen bestimmen
+	Call basedoc.DocPostSave(True) 'Historie
+	
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'++LotusScript Development Environment:2:2:Call_ChangeEditor:1:8
+Sub Call_ChangeEditor
+	
+	Dim CNOldEditor As NotesName
+	
+	Set ws=New NotesUIWorkspace
+	Set session=New NotesSession
+	Set ThisUIdoc=ws.CurrentDocument
+	
+	OldEditor$=ThisUIdoc.FieldGetText("Call_Editor")
+	OldFinalDate$=ThisUIdoc.FieldGetText("Call_FinalDate")
+	
+	If ws.Dialogbox("ChangeCallEditor",True,True) Then
+		If OldEditor$<>ThisUIdoc.FieldGetText("Call_Editor") Then
+			Set CNOldEditor=New NotesName(OldEditor$)
+			If ThisUIdoc.FieldGetText("OldCall_Editor")="" Then
+				Call ThisUIdoc.FieldSetText("OldCall_Editor",CNOldEditor.Common & " (" & Cstr(Today()) & ")") 
+			Else
+				Call ThisUIdoc.FieldSetText("OldCall_Editor",CNOldEditor.Common & " (" & Cstr(Today()) & "); " & ThisUIdoc.FieldGetText("OldCall_Editor"))
+			End If			
+		End If
+		
+		If OldFinalDate$<>ThisUIdoc.FieldGetText("Call_FinalDate") Then
+			If ThisUIdoc.FieldGetText("OldCall_FinalDate")="" Then
+				Call ThisUIdoc.FieldSetText("OldCall_FinalDate",OldFinalDate$)
+			Else
+				Call ThisUIdoc.FieldSetText("OldCall_FinalDate",OldFinalDate$ & "; " & ThisUIdoc.FieldGetText("OldCall_FinalDate"))
+			End If
+		End If
+		
+		If ThisUIdoc.FieldGetText("MailToEditor")="1" Then
+			Call ThisUIdoc.FieldSetText("Flag_NotifyEditor","0")
+		End If
+		
+		Call ThisUIdoc.Refresh
+		
+	End If
+	
+End Sub
+
+
+
+
+'++LotusScript Development Environment:2:2:Call_GetNumber:1:8
+Sub Call_GetNumber(calldoc As NotesDocument)
+	
+	Dim CounterView As NotesView
+	Dim CounterDoc As NotesDocument
+	
+	pkey$=Cstr(Year(Today()))
+	
+	Set CounterView=thisdb.GetView("LookupCounter")
+	Set CounterDoc=CounterView.GetDocumentByKey(pkey$)
+	
+	If CounterDoc Is Nothing Then
+		Messagebox "FEHLER: Zähler konnte nicht bestimmt werden!", 64, thisdb.Title			
+		Exit Sub
+	End If
+	
+	'Neuer Zählerstand
+	NewENum%=CounterDoc.CounterReading(0)+1
+	CounterDoc.CounterReading=NewENum%
+	Call Counterdoc.Save(True,False)
+	
+	Select  Case Len(Cstr(NewENum%))
+		
+	Case 1
+		NewENo$=pkey$ & "-" & "0000" & Cstr(NewENum%)
+		
+	Case 2
+		NewENo$=pkey$ & "-" & "000" & Cstr(NewENum%)
+		
+	Case 3
+		NewENo$=pkey$ & "-" & "00" & Cstr(NewENum%)	
+		
+	Case 4
+		NewENo$=pkey$ & "-" & "0" & Cstr(NewENum%)					
+		
+	Case Else
+		NewENo$=pkey$ & "-" & Cstr(NewENum%)
+		
+	End Select
+	calldoc.Call_Number=NewENo$
+	calldoc.GetCallNo="J"
+	Call calldoc.Save(True,False)
+	
+End Sub
+
+
+'++LotusScript Development Environment:2:2:QuickSort_Do:1:8
+Sub QuickSort_Do( sA() As String, bottom As Long, top As Long )
+     ' Called by QuickSort
+     ' Uses Public variable sA  (array of string)
+	Dim length As Long
+	Dim i As Long
+	Dim j As Long
+	Dim Pivot As Long
+	Dim PivotValue As String
+	Dim t As String
+	Dim LastSmall As Long
+	length = top - bottom + 1
+	
+     ' Only do the QuickSort if the sublist is at least 10 items long
+	If length > 10 Then
+          ' Pivot is chosen approx. halfway through sublist.
+          ' This gives us best speed if list is almost sorted already, and is no worse than any
+          ' other choice if the list is in random order.
+		Pivot = bottom + (length \ 2)   
+		
+          ' Move PivotValue out of the way
+		PivotValue = sA( Pivot )
+		sA ( Pivot ) = sA ( bottom )
+		sA ( bottom ) = PivotValue
+		
+          ' LastSmall is the location of the last value smaller than PivotValue
+		LastSmall = bottom
+		For i = bottom + 1 To top 
+			If sA ( i ) < PivotValue Then 
+				LastSmall = LastSmall + 1
+				t = sA ( i )
+				sA ( i ) = sA ( LastSmall )
+				sA ( LastSmall ) = t
+			End If
+		Next
+		
+          ' Move the PivotValue back
+		t = sA ( LastSmall )
+		sA ( LastSmall ) = sA ( bottom )
+		sA ( bottom ) = t
+		Pivot = LastSmall
+		
+          ' Now sort each side
+		Call QuickSort_Do ( sA, bottom, Pivot - 1 )
+		Call QuickSort_Do ( sA, Pivot + 1, top )
+	End If
+	
+End Sub

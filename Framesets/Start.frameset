@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='form' xmlns='http://www.lotus.com/dxl' version='9.0' maintenanceversion='1.10'
+ replicaid='C12582AB004539D1'>
+<noteinfo noteid='172' unid='2115E03C22945D1EC125711F0054100A' sequence='28'>
+<created><datetime>20060224T161811,30+01</datetime></created>
+<modified><datetime dst='true'>20180613T143608,97+02</datetime></modified>
+<revised><datetime>20141202T074256,74+01</datetime></revised>
+<lastaccessed><datetime dst='true'>20180613T143608,97+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20180613T143608,97+02</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=SETYLN01/O=SET</name><name
+>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=SETYLN01/O=SET</name><name
+>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=SETYLN01/O=SET</name><name
+>CN=Uwe Schweitzer/O=edv-ehmig/C=de</name><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></updatedby>
+<wassignedby><name>CN=HSVV Admin/OU=ADM/O=HSVV/C=DE</name></wassignedby>
+<item name='$TITLE' sign='true'><text>Start|FR-Start</text></item>
+<item name='$WindowTitle' sign='true'><formula>@DbTitle</formula></item>
+<item name='$Comment' sign='true'><text/></item>
+<item name='$FrameSet' sign='true'>
+<rawitemdata type='1'>
+7/8YAAIAAgAAAAAAAAAAAAAAAAAAAAAA8P86AAAAAAABAAAAAAALAAsAAAAAAAUAAAAAAAUAAAAA
+AAEAAQAAAAAABQAAAAAAAAADAAEAAwABAPH/OgAAAAAAAEABAAMAAQABAAAAAAAGAAAAAAABAAAA
+AAAAAE9wZW5lcgEA////BAEAAAoBAAAAAAT2/2oDAQAAAAMABgBIAwAAAAAAAAAAAAAAAAAAAAAA
+AAAANAMAAOwC5wABAAIAU1ZHAq8A2gIWAAEADABGUi1TdGFydE1haW6uAMQC5wABAAUAQVNUQkEA
+RwKvALICGAABAA4ARlItU3RhcnRNYWluQkGuAJoC5wABAAQAW1pFXUcCrwCKAhgAAQAOAEZSLVN0
+YXJ0TWFpblpFrgByAucAAQAFAEFTVERBAEcCrwBgAhgAAQAOAEZSLVN0YXJ0TWFpbkRBrgBIAucA
+AQAFAEFTVERJAEcCrwA2AhgAAQAOAEZSLVN0YXJ0TWFpbkRJrgAeAucAAQAFAEFTVEVTAEcCrwAM
+AhgAAQAOAEZSLVN0YXJ0TWFpbkVTrgD0AecAAQAFAEFTVEZSAEcCrwDiARgAAQAOAEZSLVN0YXJ0
+TWFpbkZSrgDKAecAAQAFAEFTVEZVAEcCrwC4ARgAAQAOAEZSLVN0YXJ0TWFpbkZVrgCgAecAAQAF
+AEFTVEdOAEcCrwCOARgAAQAOAEZSLVN0YXJ0TWFpbkdOrgB2AecAAQAFAEFTVEhFAEcCrwBkARgA
+AQAOAEZSLVN0YXJ0TWFpbkhFrgBMAecAAQAFAEFTVEtTAEcCrwA6ARgAAQAOAEZSLVN0YXJ0TWFp
+bktTrgAiAecAAQAFAEFTVE1BAEcCrwAQARgAAQAOAEZSLVN0YXJ0TWFpbk1BrgD4AOcAAQAGAEFT
+VFJPRUcCrwDmABoAAQAPAEZSLVN0YXJ0TWFpblJPRQCuAMwA5wABAAUAQVNUU08ARwKvALoAGAAB
+AA4ARlItU3RhcnRNYWluU0+uAKIA5wABAAUAQVNUV1oARwKvAJAAGAABAA4ARlItU3RhcnRNYWlu
+V1quAHgA5wABAAUAQVNUV0kARwKvAGYAGAABAA4ARlItU3RhcnRNYWluV0muAE4A5wABAAcAU3Vw
+cG9ydAABAAUAQWRtaW4AHwJHAq8ALgAWAAEADABGUi1TdGFydE1haW6uABgAAQAMAEZSLVN0YXJ0
+VXNlcq4ABAC1IwMABwBGAD8ACTJSMTFSMjBSUjI5UlIzOFI0N1I1NlI2NVI3NFI4M1I5MlIxMDFS
+MTEwUjExOVIxMjhSMTM3UjE0NlIxNTdSABQAAAASAAEACABGcmFtZXNldAMA
+</rawitemdata></item>
+<item name='$Flags'><text>#34CQ</text></item>
+<item name='$DesignerVersion'><text>8.5.2</text></item></note>
+
